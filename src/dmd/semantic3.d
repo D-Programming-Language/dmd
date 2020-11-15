@@ -1455,33 +1455,10 @@ private extern(C++) final class Semantic3Visitor : Visitor
         }
     }
 
-    override void visit(AggregateDeclaration ad)
+    final void generateRTInfo(AggregateDeclaration ad, Scope* sc)
     {
-        //printf("AggregateDeclaration::semantic3(sc=%p, %s) type = %s, errors = %d\n", sc, toChars(), type.toChars(), errors);
-        if (!ad.members)
-            return;
-
-        StructDeclaration sd = ad.isStructDeclaration();
-        if (!sc) // from runDeferredSemantic3 for TypeInfo generation
-        {
-            assert(sd);
-            sd.semanticTypeInfoMembers();
-            return;
-        }
-
-        auto sc2 = ad.newScope(sc);
-
-        for (size_t i = 0; i < ad.members.dim; i++)
-        {
-            Dsymbol s = (*ad.members)[i];
-            s.semantic3(sc2);
-        }
-
-        sc2.pop();
-
-        // don't do it for unused deprecated types
-        // or error ypes
-        if (!ad.getRTInfo && Type.rtinfo && (!ad.isDeprecated() || global.params.useDeprecated != DiagnosticReporting.error) && (ad.type && ad.type.ty != Terror))
+        // don't do it for or error types
+        if (!ad.getRTInfo && Type.rtinfo && !global.params.betterC && (ad.type && ad.type.ty != Terror))
         {
             // Evaluate: RTinfo!type
             auto tiargs = new Objects();
@@ -1504,9 +1481,51 @@ private extern(C++) final class Semantic3Visitor : Visitor
             e = e.ctfeInterpret();
             ad.getRTInfo = e;
         }
+    }
+
+    override void visit(AggregateDeclaration ad)
+    {
+        //printf("AggregateDeclaration::semantic3(sc=%p, %s) type = %s, errors = %d\n", sc, toChars(), type.toChars(), errors);
+        if (!ad.members)
+            return;
+
+        StructDeclaration sd = ad.isStructDeclaration();
+        if (!sc) // from runDeferredSemantic3 for TypeInfo generation
+        {
+            assert(sd);
+            sd.semanticTypeInfoMembers();
+            if (ad.rtInfoScope)
+                generateRTInfo(ad, ad.rtInfoScope);
+            return;
+        }
+
+        auto sc2 = ad.newScope(sc);
+
+        for (size_t i = 0; i < ad.members.dim; i++)
+        {
+            Dsymbol s = (*ad.members)[i];
+            s.semantic3(sc2);
+        }
+
+        sc2.pop();
+
+        if (ad.rtInfoScope)
+            generateRTInfo(ad, ad.rtInfoScope);
+
         if (sd)
             sd.semanticTypeInfoMembers();
         ad.semanticRun = PASS.semantic3done;
+    }
+
+    override void visit(TypeInfoStructDeclaration tid)
+    {
+        StructDeclaration sd = tid.tinfo.isTypeStruct().sym;
+        if (sd.members)
+        {
+            sd.semanticTypeInfoMembers();
+            if (sd.rtInfoScope)
+                generateRTInfo(sd, sd.rtInfoScope);
+        }
     }
 }
 

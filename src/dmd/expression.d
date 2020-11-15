@@ -3108,6 +3108,23 @@ extern (C++) final class ArrayLiteralExp : Expression
 }
 
 /***********************************************************
+ * verify that TypeInfo for the expression type exists or generate it
+ * if necessary, i.e. the current scope is not during CTFE, but
+ * the type info will be needed by the code generation later.
+ *
+ * Params:
+ *        ae = the array literal to verify
+ *        sc = the scope in which the type info should be analyzed. If null,
+ *             the global scope of Module.rootModule is used
+ */
+void verifyTypeInfo(ArrayLiteralExp ae, Scope* sc)
+{
+    if (ae.elements && !ae.type.vtinfo)
+        if (!sc || !(sc.flags & SCOPE.ctfe))
+            semanticTypeInfo(sc ? sc : Module.rootModule._scope, ae.type);
+}
+
+/***********************************************************
  * [ key0 : value0, key1 : value1, ... ]
  *
  * http://dlang.org/spec/expression.html#associative_array_literals
@@ -3170,6 +3187,24 @@ extern (C++) final class AssocArrayLiteralExp : Expression
     override void accept(Visitor v)
     {
         v.visit(this);
+    }
+}
+
+/***********************************************************
+ * verify that TypeInfo for a non-empty associative array
+ * literal expression exists
+ *
+ * Params:
+ *        aae = the associative array literal to verify
+ *        sc = the scope in which the type info should be analyzed. If null,
+ *             the global scope of Module.rootModule is used
+ */
+void verifyTypeInfo(AssocArrayLiteralExp aae, Scope* sc)
+{
+    if (aae.keys.dim)
+    {
+        Type t = aae.type.toBasetype().mutableOf();
+        semanticTypeInfo(sc, t);
     }
 }
 
@@ -3293,7 +3328,9 @@ extern (C++) final class StructLiteralExp : Expression
                     auto z = new Expressions(length);
                     foreach (ref q; *z)
                         q = e.copy();
-                    e = new ArrayLiteralExp(loc, type, z);
+                    ArrayLiteralExp ae = new ArrayLiteralExp(loc, type, z);
+                    ae.verifyTypeInfo(null); // no Scope available here, will use rootModule
+                    e = ae;
                 }
                 else
                 {
@@ -6331,6 +6368,22 @@ extern (C++) final class CatExp : BinExp
 }
 
 /***********************************************************
+ * verify that TypeInfo for a CatExp expression exists
+ *
+ * Params:
+ *        ce = the expression to verify
+ *        sc = the scope in which the type info should be analyzed.
+ */
+void verifyTypeInfo(CatExp ce, Scope* sc)
+{
+    Type tb1 = ce.e1.type.toBasetype();
+    Type tb2 = ce.e2.type.toBasetype();
+
+    Type ta = (tb1.ty == Tarray || tb1.ty == Tsarray) ? tb1 : tb2;
+    semanticTypeInfo(sc, ta);
+}
+
+/***********************************************************
  * http://dlang.org/spec/expression.html#mul_expressions
  */
 extern (C++) final class MulExp : BinExp
@@ -6582,6 +6635,29 @@ extern (C++) final class EqualExp : BinExp
     {
         v.visit(this);
     }
+}
+
+/***********************************************************
+ * verify that TypeInfo for an EqualExp expression exists
+ *
+ * Params:
+ *        ee = the expression to verify
+ *        sc = the scope in which the type info should be analyzed.
+ */
+void verifyTypeInfo(EqualExp ee, Scope* sc)
+{
+    Type t1 = ee.e1.type.toBasetype();
+    Type t2 = ee.e2.type.toBasetype();
+
+    if ((t1.ty == Tarray || t1.ty == Tsarray) &&
+        (t2.ty == Tarray || t2.ty == Tsarray))
+    {
+        Type telement  = t1.nextOf().toBasetype();
+        Type telement2 = t2.nextOf().toBasetype();
+        semanticTypeInfo(sc, telement.arrayOf());
+    }
+    else if (t1.ty == Taarray && t2.toBasetype().ty == Taarray)
+        semanticTypeInfo(sc, t1);
 }
 
 /***********************************************************

@@ -70,6 +70,9 @@ extern (C++) FuncDeclaration search_toString(StructDeclaration sd)
  */
 extern (C++) void semanticTypeInfo(Scope* sc, Type t)
 {
+    if (!global.params.useTypeInfo || !Type.dtypeinfo)
+        return; // not expected to be used with -betterC
+
     if (sc)
     {
         if (sc.intypeof)
@@ -128,7 +131,7 @@ extern (C++) void semanticTypeInfo(Scope* sc, Type t)
          */
         if (!sd.members)
             return; // opaque struct
-        if (!sd.xeq && !sd.xcmp && !sd.postblit && !sd.dtor && !sd.xhash && !search_toString(sd))
+        if (!Type.rtinfo && !sd.xeq && !sd.xcmp && !sd.postblit && !sd.dtor && !sd.xhash && !search_toString(sd))
             return; // none of TypeInfo-specific members
 
         // If the struct is in a non-root module, run semantic3 to get
@@ -166,7 +169,7 @@ extern (C++) void semanticTypeInfo(Scope* sc, Type t)
     /* Note structural similarity of this Type walker to that in isSpeculativeType()
      */
 
-    Type tb = t.toBasetype();
+    Type tb = t.toBasetype().mutableOf().unSharedOf(); // remove modifiers
     switch (tb.ty)
     {
         case Tvector:   visitVector(tb.isTypeVector()); break;
@@ -194,12 +197,19 @@ enum StructPOD : int
     fwd,   // POD not yet computed
 }
 
+private enum ZeroInit : byte
+{
+    unknown = -1,  // not computed yet
+    no = 0,        // struct is not all zeroes
+    yes = 1,       // struct is all zeroes
+};
+
 /***********************************************************
  * All `struct` declarations are an instance of this.
  */
 extern (C++) class StructDeclaration : AggregateDeclaration
 {
-    bool zeroInit;              // !=0 if initialize with 0 fill
+    ZeroInit zeroInit;          // if struct is initialized to all zeroes
     bool hasIdentityAssign;     // true if has identity opAssign
     bool hasBlitAssign;         // true if opAssign is a blit
     bool hasIdentityEquals;     // true if has identity opEquals
@@ -228,7 +238,7 @@ extern (C++) class StructDeclaration : AggregateDeclaration
     extern (D) this(const ref Loc loc, Identifier id, bool inObject)
     {
         super(loc, id);
-        zeroInit = false; // assume false until we do semantic processing
+        zeroInit = ZeroInit.unknown;
         ispod = StructPOD.fwd;
         // For forward references
         type = new TypeStruct(this);
@@ -386,36 +396,8 @@ extern (C++) class StructDeclaration : AggregateDeclaration
             return;
         }
 
-        // Determine if struct is all zeros or not
-        zeroInit = true;
-        foreach (vd; fields)
-        {
-            if (vd._init)
-            {
-                if (vd._init.isVoidInitializer())
-                    /* Treat as 0 for the purposes of putting the initializer
-                     * in the BSS segment, or doing a mass set to 0
-                     */
-                    continue;
-
-                // Zero size fields are zero initialized
-                if (vd.type.size(vd.loc) == 0)
-                    continue;
-
-                // Examine init to see if it is all 0s.
-                auto exp = vd.getConstInitializer();
-                if (!exp || !_isZeroInit(exp))
-                {
-                    zeroInit = false;
-                    break;
-                }
-            }
-            else if (!vd.type.isZeroInit(loc))
-            {
-                zeroInit = false;
-                break;
-            }
-        }
+        if (zeroInit == ZeroInit.unknown)
+            zeroInit = calcZeroInit();
 
         argTypes = target.toArgTypes(type);
     }
@@ -583,6 +565,52 @@ extern (C++) class StructDeclaration : AggregateDeclaration
         }
 
         return (ispod == StructPOD.yes);
+    }
+
+    /***************************************
+     * Lazily determine whether a struct init value is a chunk of zeroes
+     *
+     * Returns:
+     *     true if struct is all zeroes
+     */
+    final bool isZeroInit()
+    {
+        if (zeroInit == ZeroInit.unknown)
+            if (semanticRun < PASS.semanticdone && _scope)
+                dsymbolSemantic(this, null);
+        if (zeroInit == ZeroInit.unknown)
+            zeroInit = calcZeroInit();
+        return zeroInit == ZeroInit.yes;
+    }
+
+    private final ZeroInit calcZeroInit()
+    {
+        // Determine if struct is all zeros or not
+        foreach (vd; fields)
+        {
+            if (vd._init)
+            {
+                if (vd._init.isVoidInitializer())
+                    /* Treat as 0 for the purposes of putting the initializer
+                     * in the BSS segment, or doing a mass set to 0
+                     */
+                    continue;
+
+                // Zero size fields are zero initialized
+                if (vd.type.size(vd.loc) == 0)
+                    continue;
+
+                // Examine init to see if it is all 0s.
+                auto exp = vd.getConstInitializer();
+                if (!exp || !_isZeroInit(exp))
+                    return ZeroInit.no;
+            }
+            else if (!vd.type.isZeroInit(loc))
+            {
+                return ZeroInit.no;
+            }
+        }
+        return ZeroInit.yes;
     }
 
     override final inout(StructDeclaration) isStructDeclaration() inout

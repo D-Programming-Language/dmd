@@ -16,6 +16,7 @@ import dmd.dmodule;
 import dmd.dscope;
 import dmd.dclass;
 import dmd.dstruct;
+import dmd.dsymbol;
 import dmd.errors;
 import dmd.globals;
 import dmd.gluelayer;
@@ -71,7 +72,9 @@ void genTypeInfo(Loc loc, Type torig, Scope* sc)
         /* If this has a custom implementation in std/typeinfo, then
          * do not generate a COMDAT for it.
          */
-        if (!builtinTypeInfo(t))
+        if (t.ty == Terror)
+            t.vtinfo.errors = true;
+        else if (!builtinTypeInfo(t))
         {
             // Generate COMDAT
             if (sc) // if in semantic() pass
@@ -79,6 +82,8 @@ void genTypeInfo(Loc loc, Type torig, Scope* sc)
                 // Find module that will go all the way to an object file
                 Module m = sc._module.importedFrom;
                 m.members.push(t.vtinfo);
+                if (m.semanticRun >= PASS.semantic3done)
+                    Module.addDeferredSemantic3(t.vtinfo);
             }
             else // if in obj generation pass
             {

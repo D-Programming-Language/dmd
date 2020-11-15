@@ -3068,6 +3068,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
         }
         if (e.type)
         {
+            e.verifyTypeInfo(sc);
             result = e;
             return;
         }
@@ -8068,6 +8069,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
                 }
 
                 semanticTypeInfo(sc, taa);
+                semanticTypeInfo(sc, taa.index);
 
                 exp.type = taa.next;
                 break;
@@ -9191,6 +9193,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
 
             Expression ce = new CallExp(ale.loc, id, arguments);
             auto res = ce.expressionSemantic(sc);
+            semanticTypeInfo(sc, ale.e1.type.toBasetype());
             // if (global.params.verbose)
             //     message("lowered   %s =>\n          %s", exp.toChars(), res.toChars());
             return setResult(res);
@@ -9721,6 +9724,9 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
 
         if (exp.e2.checkValue() || exp.e2.checkSharedAccess(sc))
             return setError();
+
+        if (tb1.ty == Tarray)
+            semanticTypeInfo(sc, tb1);
 
         exp.type = exp.e1.type;
         auto res = exp.reorderSettingAAElem(sc);
@@ -11069,6 +11075,12 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             result = ex;
             return;
         }
+
+        Type tb = e.e1.type.toBasetype();
+        assert(tb.ty == Taarray);
+        TypeAArray taa = cast(TypeAArray)tb;
+        semanticTypeInfo(sc, taa.index); // needed by toElem
+
         result = e;
     }
 

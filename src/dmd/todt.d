@@ -1261,7 +1261,7 @@ private extern (C++) class TypeInfoDtVisitor : Visitor
 
         // void[] init;
         dtb.size(sd.structsize);            // init.length
-        if (sd.zeroInit)
+        if (sd.isZeroInit())
             dtb.size(0);                     // null for 0 initialization
         else
             dtb.xoff(toInitializer(sd), 0);    // init.ptr
@@ -1343,6 +1343,9 @@ private extern (C++) class TypeInfoDtVisitor : Visitor
                     dtb.size(0);
             }
         }
+
+        if (Type.rtinfo && !sd.getRTInfo)
+            error(sd.loc, "ICE: RTInfo not evaluated for %s", sd.toPrettyChars(true));
 
         // xgetRTInfo
         if (sd.getRTInfo)

@@ -185,6 +185,18 @@ Expression implicitCastTo(Expression e, Scope* sc, Type t)
                     semanticTypeInfo(sc, ta.next);
         }
 
+        override void visit(AssocArrayLiteralExp e)
+        {
+            visit(cast(Expression)e);
+            semanticTypeInfo(sc, result.type);
+        }
+
+        override void visit(NewExp e)
+        {
+            visit(cast(Expression)e);
+            semanticTypeInfo(sc, result.type);
+        }
+
         override void visit(SliceExp e)
         {
             visit(cast(Expression)e);
@@ -1750,6 +1762,12 @@ Expression castTo(Expression e, Scope* sc, Type t)
             result = e;
         }
 
+        override void visit(NewExp e)
+        {
+            visit(cast(Expression)e);
+            semanticTypeInfo(sc, result.type);
+        }
+
         override void visit(StructLiteralExp e)
         {
             visit(cast(Expression)e);
@@ -2209,6 +2227,7 @@ Expression castTo(Expression e, Scope* sc, Type t)
                 {
                     ae = cast(ArrayLiteralExp)e.copy();
                     ae.type = tp;
+                    semanticTypeInfo(sc, ae.type);
                 }
             }
             else if (tb.ty == Tvector && (typeb.ty == Tarray || typeb.ty == Tsarray))
@@ -2242,6 +2261,7 @@ Expression castTo(Expression e, Scope* sc, Type t)
                 }
                 Expression ev = new VectorExp(e.loc, ae, tb);
                 ev = ev.expressionSemantic(sc);
+                semanticTypeInfo(sc, ev.type);
                 result = ev;
                 return;
             }
@@ -2279,6 +2299,7 @@ Expression castTo(Expression e, Scope* sc, Type t)
                     (*ae.keys)[i] = ex;
                 }
                 ae.type = t;
+                ae.verifyTypeInfo(sc);
                 result = ae;
                 return;
             }

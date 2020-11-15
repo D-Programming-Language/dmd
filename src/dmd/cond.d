@@ -447,14 +447,15 @@ extern (C++) final class StaticForeach : RootObject
             }
         }
 
-        if (aggrfe && aggrfe.aggr.type.toBasetype().ty == Terror)
+        auto ty = aggrfe ? aggrfe.aggr.type.toBasetype().ty : TMAX;
+        if (ty == Terror)
         {
             return;
         }
 
         if (!ready())
         {
-            if (aggrfe && aggrfe.aggr.type.toBasetype().ty == Tarray)
+            if (ty == Tarray || ty == Tsarray)
             {
                 lowerArrayAggregate(sc);
             }

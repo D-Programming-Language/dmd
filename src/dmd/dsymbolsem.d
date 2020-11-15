@@ -1310,7 +1310,7 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
                 dsym._init = new ExpInitializer(dsym.loc, e);
                 goto Ldtor;
             }
-            if (tv.ty == Tstruct && (cast(TypeStruct)tv).sym.zeroInit)
+            if (tv.ty == Tstruct && (cast(TypeStruct)tv).sym.isZeroInit())
             {
                 /* If a struct is all zeros, as a special case
                  * set it's initializer to the integer 0.
@@ -4852,6 +4852,10 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
             }
         }
 
+        if (!sc.nofree)
+            sc.setNoFree();                // may need it even after semantic() finishes
+        sd.rtInfoScope = sc;
+
         if (sd.type.ty == Tstruct && (cast(TypeStruct)sd.type).sym != sd)
         {
             // https://issues.dlang.org/show_bug.cgi?id=19024
@@ -5513,7 +5517,11 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
         cldec.semanticRun = PASS.semanticdone;
         //printf("-ClassDeclaration.dsymbolSemantic(%s), type = %p\n", toChars(), type);
 
-        sc2.pop();
+        sc2 = sc2.pop();
+
+        if (!sc2.nofree)
+            sc2.setNoFree();                // may need it even after semantic() finishes
+        cldec.rtInfoScope = sc2;
 
         /* isAbstract() is undecidable in some cases because of circular dependencies.
          * Now that semantic is finished, get a definitive result, and error if it is not the same.
@@ -5865,7 +5873,11 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
         idec.semanticRun = PASS.semanticdone;
         //printf("-InterfaceDeclaration.dsymbolSemantic(%s), type = %p\n", toChars(), type);
 
-        sc2.pop();
+        sc2 = sc2.pop();
+
+        if (!sc2.nofree)
+            sc2.setNoFree();                // may need it even after semantic() finishes
+        idec.rtInfoScope = sc2;
 
         if (global.errors != errors)
         {

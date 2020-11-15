@@ -3730,8 +3730,7 @@ extern (C++) final class TypeSArray : TypeArray
         auto elements = new Expressions(d);
         foreach (ref e; *elements)
             e = null;
-        auto ae = new ArrayLiteralExp(Loc.initial, this, elementinit, elements);
-        return ae;
+        return new ArrayLiteralExp(Loc.initial, this, elementinit, elements);
     }
 
     override bool hasPointers()
@@ -5847,7 +5846,7 @@ extern (C++) final class TypeStruct : Type
     {
         // Determine zeroInit here, as this can be called before semantic2
         sym.determineSize(sym.loc);
-        return sym.zeroInit;
+        return sym.isZeroInit();
     }
 
     override bool isAssignable()
