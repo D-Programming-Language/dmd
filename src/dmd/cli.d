@@ -782,6 +782,7 @@ dmd -cov -unittest myprog.d
         Feature("dip25", "useDIP25", "revert DIP25 changes https://github.com/dlang/DIPs/blob/master/DIPs/archive/DIP25.md"),
         Feature("markdown", "markdown", "disable Markdown replacements in Ddoc"),
         Feature("dtorfields", "dtorFields", "don't destruct fields of partially constructed objects"),
+        Feature("aliasaggquals", "noAliasAggQuals", "drop qualifiers when passing an aggregate type as a template alias parameter"),
     ];
 
     /// Returns all available previews

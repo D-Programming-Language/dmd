@@ -7831,7 +7831,8 @@ struct TemplateInstanceBox
  *      dedtypes[]      deduced arguments to template instance
  *      *psparam        set to symbol declared and initialized to dedtypes[i]
  */
-MATCH matchArg(TemplateParameter tp, Loc instLoc, Scope* sc, Objects* tiargs, size_t i, TemplateParameters* parameters, Objects* dedtypes, Declaration* psparam)
+MATCH matchArg(TemplateParameter tp, Loc instLoc, Scope* sc, Objects* tiargs,
+    size_t i, TemplateParameters* parameters, Objects* dedtypes, Declaration* psparam)
 {
     MATCH matchArgNoMatch()
     {
@@ -8108,8 +8109,13 @@ MATCH matchArg(TemplateParameter tp, Scope* sc, RootObject oarg, size_t i, Templ
         if (sa)
         {
             if ((cast(Dsymbol)sa).isAggregateDeclaration())
+            {
+                // Don't lose type qualifiers
+                // https://issues.dlang.org/show_bug.cgi?id=20863
+                if (!global.params.noAliasAggQuals && ta && ta.mod)
+                    sa = oarg;
                 m = MATCH.convert;
-
+            }
             /* specType means the alias must be a declaration with a type
              * that matches specType.
              */
