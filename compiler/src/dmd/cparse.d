@@ -1997,8 +1997,7 @@ final class CParser(AST) : Parser!AST
                     {
                         auto str = asmName.peekString();
                         p.mangleOverride = str;
-//                      p.adFlags |= AST.VarDeclaration.nounderscore;
-                        p.adFlags |= 4; // cannot get above line to compile on Ubuntu
+                        p.adFlags |= AST.VarDeclaration.nounderscore;
                     }
                 }
                 s = applySpecifier(s, specifier);
