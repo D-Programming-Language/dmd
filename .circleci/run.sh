@@ -10,6 +10,7 @@ CIRCLE_STAGE=${CIRCLE_STAGE:-pic}
 CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME:-dmd}
 BUILD="debug"
 DMD=dmd
+OS=linux
 
 case $CIRCLE_NODE_INDEX in
     0) MODEL=64 ;;
@@ -111,7 +112,7 @@ coverage()
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
-    local build_path=generated/linux/$BUILD/$MODEL
+    local build_path=generated/$OS/$BUILD/$MODEL
     local builder=generated/build
 
     dmd -g -od=generated -of=$builder compiler/src/build
@@ -163,7 +164,7 @@ check_clean_git()
 # sanitycheck for the run_individual_tests script
 check_run_individual()
 {
-    local build_path=generated/linux/$BUILD/$MODEL
+    local build_path=generated/$OS/$BUILD/$MODEL
     "${build_path}/dmd" -Icompiler/test -i -run ./compiler/test/run.d "BUILD=$BUILD" "MODEL=$MODEL" compiler/test/runnable/template2962.d ./compiler/test/compilable/test14275.d
 }
 
@@ -177,7 +178,7 @@ check_d_builder()
     rm -rf generated # just to be sure
     # TODO: add support for 32-bit builds
     ./compiler/src/build.d MODEL=64
-    ./generated/linux/release/64/dmd --version | grep -v "dirty"
+    ./generated/$OS/release/64/dmd --version | grep -v "dirty"
     ./compiler/src/build.d clean
     deactivate
 }

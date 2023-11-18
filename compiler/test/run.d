@@ -288,6 +288,8 @@ void ensureToolsExists(const string[string] env, const TestTool[] tools ...)
                 // DMD compiler under test
                 command = [
                     env["DMD"],
+                    // Do not depend on linking Phobos, especially for `dshell_prebuilt`
+                    "-checkaction=D",
                     "-conf=",
                     "-m"~env["MODEL"],
                     "-of" ~ targetBin,

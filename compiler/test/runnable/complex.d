@@ -1,5 +1,5 @@
 /*
-REQUIRED_ARGS: -d
+REQUIRED_ARGS: -d -checkaction=D
 TEST_OUTPUT:
 ---
 ---

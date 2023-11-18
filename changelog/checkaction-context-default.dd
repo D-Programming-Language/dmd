@@ -1,0 +1,15 @@
+Enhanced `assert` informations are now printed by default
+
+Starting from this release, DMD will now print rich informations on assert failures.
+For example, the following code:
+---
+void main ()
+{
+    int a = 0, b = 42;
+    assert(a == b);
+}
+---
+
+Will now print: `core.exception.AssertError@filename.d(4): 0 != 42`.
+This behavior was previously accessible via the CLI switch `-checkaction=context`.
+To revert to the old behavior, use `-checkaction=D`.

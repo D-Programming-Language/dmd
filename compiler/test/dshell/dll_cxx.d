@@ -53,7 +53,7 @@ int main()
     // The arguments have to be passed as an array, because run would replace '/' with '\\' otherwise.
     run(dllCmd);
 
-    run(`$DMD -m$MODEL -I$SRC -g -od=$OUTPUT_BASE -of=$EXE_NAME $SRC/testdll.d $SRC/cppnew.d ` ~ mainExtra);
+    run(`$DMD -m$MODEL -I$SRC -checkaction=D -g -od=$OUTPUT_BASE -of=$EXE_NAME $SRC/testdll.d $SRC/cppnew.d ` ~ mainExtra);
 
     run(`$EXE_NAME`, stdout, stderr, [`LD_LIBRARY_PATH`: Vars.OUTPUT_BASE]);
 

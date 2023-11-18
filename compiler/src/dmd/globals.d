@@ -50,10 +50,10 @@ enum CHECKENABLE : ubyte
 /// What should happend when an assertion fails
 enum CHECKACTION : ubyte
 {
+    context,      /// call D assert with the error context on failure
     D,            /// call D assert on failure
     C,            /// call C assert on failure
     halt,         /// cause program halt on failure
-    context,      /// call D assert with the error context on failure
 }
 
 /**
@@ -213,7 +213,8 @@ extern (C++) struct Param
     CHECKENABLE useSwitchError = CHECKENABLE._default;  // check for switches without a default
     CHECKENABLE boundscheck    = CHECKENABLE._default;  // state of -boundscheck switch
 
-    CHECKACTION checkAction = CHECKACTION.D; // action to take when bounds, asserts or switch defaults are violated
+    /// Action to take when bounds, asserts or switch defaults are violated
+    CHECKACTION checkAction = CHECKACTION.context;
 
     const(char)[] argv0;                // program name
     Array!(const(char)*) modFileAliasStrings; // array of char*'s of -I module filename alias strings
