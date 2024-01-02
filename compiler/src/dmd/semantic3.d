@@ -232,7 +232,7 @@ private extern(C++) final class Semantic3Visitor : Visitor
                 return true;
 
             return f.next.ty == Tvoid &&
-                (funcdecl.isMain() || global.params.betterC && funcdecl.isCMain());
+                (funcdecl.isMain() || funcdecl.isCMain());
         }
 
         VarDeclaration _arguments = null;
