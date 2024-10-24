@@ -862,7 +862,7 @@ private void writefunc2(Symbol *sfunc, ref GlobalOptimizer go)
 {
     func_t *f = sfunc.Sfunc;
 
-    //printf("writefunc(%s)\n",sfunc.Sident.ptr);
+    debugb && printf("===================== writefunc %s =================\n",sfunc.Sident.ptr);
     //symbol_print(sfunc);
     debug debugy && printf("writefunc(%s)\n",sfunc.Sident.ptr);
 

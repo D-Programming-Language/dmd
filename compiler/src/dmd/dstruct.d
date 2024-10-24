@@ -98,9 +98,11 @@ extern (C++) class StructDeclaration : AggregateDeclaration
         bool zeroInit;              // !=0 if initialize with 0 fill
         bool hasIdentityAssign;     // true if has identity opAssign
         bool hasBlitAssign;         // true if opAssign is a blit
+        bool hasMoveAssign;         // true if move assignment
         bool hasIdentityEquals;     // true if has identity opEquals
         bool hasNoFields;           // has no fields
         bool hasCopyCtor;           // copy constructor
+        bool hasMoveCtor;           // move constructor
         bool hasPointerField;       // members with indirections
         bool hasVoidInitPointers;   // void-initialized unsafe fields
         bool hasUnsafeBitpatterns;  // @system members, pointers, bool
@@ -303,7 +305,7 @@ extern (C++) class StructDeclaration : AggregateDeclaration
      * POD is defined as:
      *      $(OL
      *      $(LI not nested)
-     *      $(LI no postblits, destructors, or assignment operators)
+     *      $(LI no postblits, copy constructors, move constructors, destructors, or assignment operators)
      *      $(LI no `ref` fields or fields that are themselves non-POD)
      *      )
      * The idea being these are compatible with C structs.
@@ -322,10 +324,14 @@ extern (C++) class StructDeclaration : AggregateDeclaration
         bool hasCpCtorLocal;
         needCopyCtor(this, hasCpCtorLocal);
 
+        bool hasMoveCtorLocal;
+        needMoveCtor(this, hasMoveCtorLocal);
+
         if (enclosing                      || // is nested
             search(this, loc, Id.postblit) || // has postblit
             search(this, loc, Id.dtor)     || // has destructor
-            hasCpCtorLocal)                   // has copy constructor
+            hasCpCtorLocal                 || // has copy constructor
+            hasMoveCtorLocal)                 // has move constructor
         {
             ispod = ThreeState.no;
             return false;

@@ -884,6 +884,7 @@ extern (D) MATCH callMatch(TypeFunction tf, Type tthis, ArgumentList argumentLis
 private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
     Expression arg, Type tprm, Scope* sc, const(char)** pMessage)
 {
+    //printf("isCopyConstructorCallable() %s, %s, %s,\n", argStruct.toChars(), toChars(arg), toChars(tprm));
     auto tmp = new VarDeclaration(arg.loc, tprm, Identifier.generateId("__copytmp"), null);
     tmp.storage_class = STC.rvalue | STC.temp | STC.ctfe;
     tmp.dsymbolSemantic(sc);
@@ -891,8 +892,11 @@ private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
     Expression e = new DotIdExp(arg.loc, ve, Id.ctor);
     e = new CallExp(arg.loc, e, arg);
     //printf("e = %s\n", e.toChars());
+
     if (dmd.expressionsem.trySemantic(e, sc))
+    {
         return true;
+    }
 
     if (!pMessage)
         return false;
@@ -970,7 +974,7 @@ private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
  *
  * This function is called by `TypeFunction.callMatch` while iterating over
  * the list of parameter. Here we check if `arg` is a match for `p`,
- * which is mostly about checking if `arg.type` converts to `p`'s type
+ * which is mostly about checking if `arg.type` converts to the type of `p`
  * and some check about value reference.
  *
  * Params:
@@ -978,7 +982,7 @@ private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
  *   p = The parameter of `tf` being matched
  *   arg = Argument being passed (bound) to `p`
  *   wildmatch = Wild (`inout`) matching level, derived from the full argument list
- *   flag = A non-zero value means we're doing a partial ordering check
+ *   flag = A non-zero value means we are doing a partial ordering check
  *          (no value semantic check)
  *   sc = Scope we are in
  *   pMessage = A buffer to write the error in, or `null`
@@ -988,10 +992,14 @@ private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
 private extern(D) MATCH argumentMatchParameter (TypeFunction tf, Parameter p,
     Expression arg, ubyte wildmatch, int flag, Scope* sc, const(char)** pMessage)
 {
-    //printf("arg: %s, type: %s\n", arg.toChars(), arg.type.toChars());
+    //printf("argumentMatchParameter() flag: %d arg: %s, type: %s\n", flag, arg.toChars(), (arg.type ? arg.type.toChars() : "null".ptr));
     MATCH m;
     Type targ = arg.type;
     Type tprm = wildmatch ? p.type.substWildTo(wildmatch) : p.type;
+
+    bool hasMoveCtor;
+    if (auto ts = targ.isTypeStruct())
+        hasMoveCtor = ts.sym.hasMoveCtor;
 
     if (p.isLazy() && tprm.ty == Tvoid && targ.ty != Tvoid)
         m = MATCH.convert;
@@ -1016,9 +1024,10 @@ private extern(D) MATCH argumentMatchParameter (TypeFunction tf, Parameter p,
         // check if the copy constructor may be called to copy the argument
         if (argStruct && argStruct == prmStruct && argStruct.hasCopyCtor)
         {
-            if (!isCopyConstructorCallable(argStruct, arg, tprm, sc, pMessage))
+            if (hasMoveCtor || isCopyConstructorCallable(argStruct, arg, tprm, sc, pMessage))
+                m = MATCH.exact;
+            else
                 return MATCH.nomatch;
-            m = MATCH.exact;
         }
         else
         {
@@ -1077,19 +1086,20 @@ private extern(D) MATCH argumentMatchParameter (TypeFunction tf, Parameter p,
             // Need to make this a rvalue through a temporary
             m = MATCH.convert;
         }
-        else if (global.params.rvalueRefParam != FeatureState.enabled ||
-                 p.storageClass & STC.out_ ||
-                 !arg.type.isCopyable())  // can't copy to temp for ref parameter
-        {
-            if (pMessage) *pMessage = tf.getParamError(arg, p);
-            return MATCH.nomatch;
-        }
-        else
+        else if (global.params.rvalueRefParam == FeatureState.enabled &&
+                 !hasMoveCtor &&
+                 arg.type.isCopyable())
         {
             /* in functionParameters() we'll convert this
              * rvalue into a temporary
              */
             m = MATCH.convert;
+        }
+        else
+        {
+            // can't copy to temp for ref parameter
+            if (pMessage) *pMessage = tf.getParamError(arg, p);
+            return MATCH.nomatch;
         }
     }
 
@@ -4882,6 +4892,7 @@ Expression dotExp(Type mt, Scope* sc, Expression e, Identifier ident, DotExpFlag
             // https://issues.dlang.org/show_bug.cgi?id=15045
             // Don't forward special built-in member functions.
             ident != Id.ctor &&
+            ident != Id.moveCtor &&
             ident != Id.dtor &&
             ident != Id.__xdtor &&
             ident != Id.postblit &&

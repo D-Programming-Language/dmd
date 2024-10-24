@@ -177,6 +177,8 @@ public:
     bool zeroInit(bool v);
     bool hasIdentityAssign() const; // true if has identity opAssign
     bool hasIdentityAssign(bool v);
+    bool hasMoveAssign() const;     // true if has identity opAssign
+    bool hasMoveAssign(bool v);
     bool hasBlitAssign() const;     // true if opAssign is a blit
     bool hasBlitAssign(bool v);
     bool hasIdentityEquals() const; // true if has identity opEquals
@@ -185,6 +187,8 @@ public:
     bool hasNoFields(bool v);
     bool hasCopyCtor() const;       // copy constructor
     bool hasCopyCtor(bool v);
+    bool hasMoveCtor() const;       // copy constructor
+    bool hasMoveCtor(bool v);
     // Even if struct is defined as non-root symbol, some built-in operations
     // (e.g. TypeidExp, NewExp, ArrayLiteralExp, etc) request its TypeInfo.
     // For those, today TypeInfo_Struct is generated in COMDAT.

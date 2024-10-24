@@ -1365,30 +1365,35 @@ extern (C++) final class FuncLiteralDeclaration : FuncDeclaration
  */
 extern (C++) final class CtorDeclaration : FuncDeclaration
 {
-    bool isCpCtor;
-    extern (D) this(const ref Loc loc, const ref Loc endloc, StorageClass stc, Type type, bool isCpCtor = false)
+    bool isCpCtor;      // it's a copy constructor
+    bool isMoveCtor;    // it's a move constructor
+
+    extern (D) this(const ref Loc loc, const ref Loc endloc, StorageClass stc, Type type, bool isCpCtor, bool isMoveCtor)
     {
-        super(loc, endloc, Id.ctor, stc, type);
-        this.isCpCtor = isCpCtor;
+        super(loc, endloc, isMoveCtor ? Id.moveCtor : Id.ctor, stc, type);
+        this.isCpCtor   = isCpCtor;
+        this.isMoveCtor = isMoveCtor;
         //printf("CtorDeclaration(loc = %s) %s %p\n", loc.toChars(), toChars(), this);
     }
 
     override CtorDeclaration syntaxCopy(Dsymbol s)
     {
         assert(!s);
-        auto f = new CtorDeclaration(loc, endloc, storage_class, type.syntaxCopy());
+        auto f = new CtorDeclaration(loc, endloc, storage_class, type.syntaxCopy(), isCpCtor, isMoveCtor);
         FuncDeclaration.syntaxCopy(f);
         return f;
     }
 
     override const(char)* kind() const
     {
-        return isCpCtor ? "copy constructor" : "constructor";
+        return isCpCtor   ? "copy constructor" :
+               isMoveCtor ? "move constructor" :
+                            "constructor";
     }
 
     override const(char)* toChars() const
     {
-        return "this";
+        return isMoveCtor ? "=this" : "this";
     }
 
     override bool isVirtual() const

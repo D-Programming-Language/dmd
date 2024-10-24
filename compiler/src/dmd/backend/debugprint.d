@@ -509,7 +509,7 @@ void numberBlocks(block *startblock)
 @trusted
 void WRfunc(const char* msg, Symbol* sfunc, block* startblock)
 {
-    printf("............%s...%s().............\n", msg, sfunc.Sident.ptr);
+    printf("............%s...%s()\n", msg, sfunc.Sident.ptr);
     numberBlocks(startblock);
     for (block *b = startblock; b; b = b.Bnext)
         WRblock(b);

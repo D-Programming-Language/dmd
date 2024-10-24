@@ -1653,7 +1653,7 @@ Expression semanticTraits(TraitsExp e, Scope* sc)
                 // https://issues.dlang.org/show_bug.cgi?id=10096
                 // https://issues.dlang.org/show_bug.cgi?id=10100
                 // Skip over internal members in __traits(allMembers)
-                if ((sm.isCtorDeclaration() && sm.ident != Id.ctor) ||
+                if ((sm.isCtorDeclaration() && sm.ident != Id.ctor && sm.ident != Id.moveCtor) ||
                     (sm.isDtorDeclaration() && sm.ident != Id.dtor) ||
                     (sm.isPostBlitDeclaration() && sm.ident != Id.postblit) ||
                     sm.isInvariantDeclaration() ||

@@ -555,6 +555,7 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
 
     override void visit(VarDeclaration dsym)
     {
+        //printf("VarDeclaration %s\n", dsym.toChars());
         version (none)
         {
             printf("VarDeclaration::semantic('%s', parent = '%s') sem = %d\n",
@@ -2399,7 +2400,7 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
 
     override void visit(CtorDeclaration ctd)
     {
-        //printf("CtorDeclaration::semantic() %s\n", toChars());
+        //printf("CtorDeclaration::semantic() %s\n", ctd.toChars());
         if (ctd.semanticRun >= PASS.semanticdone)
             return;
         if (ctd._scope)
@@ -2439,12 +2440,14 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
             return;
 
         TypeFunction tf = ctd.type.toTypeFunction();
+        //printf("tf: %s\n", tf.toChars());
         immutable dim = tf.parameterList.length;
         auto sd = ad.isStructDeclaration();
 
         /* See if it's the default constructor
          * But, template constructor should not become a default constructor.
          */
+        bool moveCtor = false;   // assume it is not
         if (ad && (!ctd.parent.isTemplateInstance() || ctd.parent.isTemplateMixin()))
         {
             if (!sd)
@@ -2480,14 +2483,21 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
                     .error(ctd.loc, "%s `%s` all parameters have default arguments, "~
                               "but structs cannot have default constructors.", ctd.kind, ctd.toPrettyChars);
             }
-            else if ((dim == 1 || (dim > 1 && tf.parameterList[1].defaultArg)))
+            else if (dim == 1 || (dim > 1 && tf.parameterList[1].defaultArg))
             {
-                //printf("tf: %s\n", tf.toChars());
                 auto param = tf.parameterList[0];
-                if (param.storageClass & STC.ref_ && param.type.mutableOf().unSharedOf() == sd.type.mutableOf().unSharedOf())
+                if (param.type.mutableOf().unSharedOf() == sd.type.mutableOf().unSharedOf())
                 {
-                    //printf("copy constructor\n");
-                    ctd.isCpCtor = true;
+                    if (param.storageClass & STC.ref_)
+                    {
+                        //printf("found copy constructor\n");
+                        ctd.isCpCtor = true;
+                    }
+                    else
+                    {
+                        //printf("found move constructor\n");
+                        moveCtor = true;
+                    }
                 }
             }
         }
@@ -2495,6 +2505,18 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
         else if (auto ti = ctd.parent.isTemplateInstance())
         {
             checkHasBothRvalueAndCpCtor(sd, ctd, ti);
+        }
+
+        if (moveCtor != ctd.isMoveCtor)
+        {
+            if (moveCtor)
+            {
+                // Just accept this for now as there is existing code with rvalue constructors,
+                // such as std.typecons.Ternary
+                //.error(ctd.loc, "move constructor `%s` should be declared as `=this`", ctd.toPrettyChars());
+            }
+            else
+                .error(ctd.loc, "first parameter to move constructor should be type struct `%s`", sd.toPrettyChars());
         }
     }
 
@@ -2979,6 +3001,7 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
         buildDtors(sd, sc2);
 
         sd.hasCopyCtor = buildCopyCtor(sd, sc2);
+        sd.hasMoveCtor = buildMoveCtor(sd, sc2);
         sd.postblit = buildPostBlit(sd, sc2);
 
         buildOpAssign(sd, sc2);
@@ -3623,7 +3646,7 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
                 // This is required if other lowerings add code to the generated constructor which
                 // is less strict (e.g. `preview=dtorfields` might introduce a call to a less qualified dtor)
 
-                auto ctor = new CtorDeclaration(cldec.loc, Loc.initial, 0, tf);
+                auto ctor = new CtorDeclaration(cldec.loc, Loc.initial, 0, tf, false, false);
                 ctor.storage_class |= STC.inference | (fd.storage_class & STC.scope_);
                 ctor.isGenerated = true;
                 ctor.fbody = new CompoundStatement(Loc.initial, new Statements());

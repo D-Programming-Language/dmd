@@ -1544,6 +1544,9 @@ FuncDeclaration buildPostBlit(StructDeclaration sd, Scope* sc)
     return xpostblit;
 }
 
+/* ===================================== Copy Constructor ========================== */
+static if (1) {
+
 /**
  * Generates a copy constructor declaration with the specified storage
  * class for the parameter and the function.
@@ -1552,18 +1555,19 @@ FuncDeclaration buildPostBlit(StructDeclaration sd, Scope* sc)
  *  sd = the `struct` that contains the copy constructor
  *  paramStc = the storage class of the copy constructor parameter
  *  funcStc = the storage class for the copy constructor declaration
+ *  copyCtor = true for copy constructor, false for move constructor
  *
  * Returns:
  *  The copy constructor declaration for struct `sd`.
  */
-private CtorDeclaration generateCopyCtorDeclaration(StructDeclaration sd, const StorageClass paramStc, const StorageClass funcStc)
+private CtorDeclaration generateCopyCtorDeclaration(StructDeclaration sd, const StorageClass paramStc, const StorageClass funcStc, bool copyCtor)
 {
     auto fparams = new Parameters();
     auto structType = sd.type;
     fparams.push(new Parameter(Loc.initial, paramStc | STC.ref_ | STC.return_ | STC.scope_, structType, Id.p, null, null));
     ParameterList pList = ParameterList(fparams);
     auto tf = new TypeFunction(pList, structType, LINK.d, STC.ref_);
-    auto ccd = new CtorDeclaration(sd.loc, Loc.initial, STC.ref_, tf, true);
+    auto ccd = new CtorDeclaration(sd.loc, Loc.initial, STC.ref_, tf, copyCtor, !copyCtor);
     ccd.storage_class |= funcStc;
     ccd.storage_class |= STC.inference;
     ccd.isGenerated = true;
@@ -1726,7 +1730,7 @@ bool buildCopyCtor(StructDeclaration sd, Scope* sc)
     //printf("generating copy constructor for %s\n", sd.toChars());
     const MOD paramMod = MODFlags.wild;
     const MOD funcMod = MODFlags.wild;
-    auto ccd = generateCopyCtorDeclaration(sd, ModToStc(paramMod), ModToStc(funcMod));
+    auto ccd = generateCopyCtorDeclaration(sd, ModToStc(paramMod), ModToStc(funcMod), true);
     auto copyCtorBody = generateCopyCtorBody(sd);
     ccd.fbody = copyCtorBody;
     sd.members.push(ccd);
@@ -1746,4 +1750,210 @@ bool buildCopyCtor(StructDeclaration sd, Scope* sc)
         ccd.fbody = null;
     }
     return true;
+}
+
+}
+
+/* ===================================== Move Constructor ========================== */
+static if (1) {
+
+/**
+ * Generates a move constructor declaration with the specified storage
+ * class for the parameter and the function.
+ *
+ * Params:
+ *  sd = the `struct` that contains the move constructor
+ *  paramStc = the storage class of the move constructor parameter
+ *  funcStc = the storage class for the move constructor declaration
+ *
+ * Returns:
+ *  The move constructor declaration for struct `sd`.
+ */
+private CtorDeclaration generateMoveCtorDeclaration(StructDeclaration sd, const StorageClass paramStc, const StorageClass funcStc)
+{
+    /* Although the move constructor is declared as `=this(S s) { ... }`,
+     * it is implemented as `=this(ref S s) { ... }`
+     */
+    return generateCopyCtorDeclaration(sd, paramStc, funcStc, false);
+}
+
+/**
+ * Generates a trivial move constructor body that simply does memberwise
+ * initialization:
+ *
+ *    this.field1 = rhs.field1;
+ *    this.field2 = rhs.field2;
+ *    ...
+ *
+ * Params:
+ *  sd = the `struct` declaration that contains the copy constructor
+ *
+ * Returns:
+ *  A `CompoundStatement` containing the body of the copy constructor.
+ */
+private Statement generateMoveCtorBody(StructDeclaration sd)
+{
+    Loc loc;
+    Expression e;
+    foreach (v; sd.fields)
+    {
+        auto ec = new AssignExp(loc,
+            new DotVarExp(loc, new ThisExp(loc), v),
+            new DotVarExp(loc, new IdentifierExp(loc, Id.p), v));
+        e = Expression.combine(e, ec);
+        //printf("e.toChars = %s\n", e.toChars());
+    }
+    Statement s1 = new ExpStatement(loc, e);
+    return new CompoundStatement(loc, s1);
+}
+
+/**
+ * Determine if a move constructor is needed for struct sd,
+ * if the following conditions are met:
+ *
+ * 1. sd does not define a move constructor
+ * 2. at least one field of sd defines a move constructor
+ *
+ * Params:
+ *  sd = the `struct` for which the move constructor is generated
+ *  hasMoveCtor = set to true if a move constructor is already present
+ *
+ * Returns:
+ *  `true` if one needs to be generated
+ *  `false` otherwise
+ */
+bool needMoveCtor(StructDeclaration sd, out bool hasMoveCtor)
+{
+    if (global.errors)
+        return false;
+
+    auto ctor = sd.search(sd.loc, Id.moveCtor);
+    if (ctor)
+    {
+        if (ctor.isOverloadSet())
+            return false;
+        if (auto td = ctor.isTemplateDeclaration())
+            ctor = td.funcroot;
+    }
+
+    CtorDeclaration moveCtor;
+    CtorDeclaration rvalueCtor;
+
+    if (!ctor)
+        goto LcheckFields;
+
+    overloadApply(ctor, (Dsymbol s)
+    {
+        if (s.isTemplateDeclaration())
+            return 0;
+        auto ctorDecl = s.isCtorDeclaration();
+        assert(ctorDecl);
+        if (ctorDecl.isMoveCtor)
+        {
+            if (!moveCtor)
+                moveCtor = ctorDecl;
+            return 0;
+        }
+
+        if (isRvalueConstructor(sd, ctorDecl))
+            rvalueCtor = ctorDecl;
+        return 0;
+    });
+
+    if (moveCtor)
+    {
+        if (rvalueCtor)
+        {
+            .error(sd.loc, "`struct %s` may not define both a rvalue constructor and a move constructor", sd.toChars());
+            errorSupplemental(rvalueCtor.loc,"rvalue constructor defined here");
+            errorSupplemental(moveCtor.loc, "move constructor defined here");
+        }
+        hasMoveCtor = true;
+        return false;
+    }
+
+LcheckFields:
+    VarDeclaration fieldWithMoveCtor;
+    // see if any struct members define a copy constructor
+    foreach (v; sd.fields)
+    {
+        if (v.storage_class & STC.ref_)
+            continue;
+        if (v.overlapped)
+            continue;
+
+        auto ts = v.type.baseElemOf().isTypeStruct();
+        if (!ts)
+            continue;
+        if (ts.sym.hasMoveCtor)
+        {
+            fieldWithMoveCtor = v;
+            break;
+        }
+    }
+
+    if (fieldWithMoveCtor && rvalueCtor)
+    {
+        .error(sd.loc, "`struct %s` may not define a rvalue constructor and have fields with move constructors", sd.toChars());
+        errorSupplemental(rvalueCtor.loc,"rvalue constructor defined here");
+        errorSupplemental(fieldWithMoveCtor.loc, "field with move constructor defined here");
+        return false;
+    }
+    else if (!fieldWithMoveCtor)
+        return false;
+    return true;
+}
+
+/**
+ * Generates a move constructor if needMoveCtor() returns true.
+ * The generated move constructor will be of the form:
+ *   this(ref return scope inout(S) rhs) inout
+ *   {
+ *      this.field1 = rhs.field1;
+ *      this.field2 = rhs.field2;
+ *      ...
+ *   }
+ *
+ * Params:
+ *  sd = the `struct` for which the copy constructor is generated
+ *  sc = the scope where the copy constructor is generated
+ *
+ * Returns:
+ *  `true` if `struct` sd defines a copy constructor (explicitly or generated),
+ *  `false` otherwise.
+ * References:
+ *   https://dlang.org/spec/struct.html#struct-copy-constructor
+ */
+bool buildMoveCtor(StructDeclaration sd, Scope* sc)
+{
+    //printf("buildMoveCtor() %s\n", sd.toChars());
+    bool hasMoveCtor;
+    if (!needMoveCtor(sd, hasMoveCtor))
+        return hasMoveCtor;
+
+    //printf("generating move constructor for %s\n", sd.toChars());
+    const MOD paramMod = MODFlags.wild;
+    const MOD funcMod = MODFlags.wild;
+    auto ccd = generateMoveCtorDeclaration(sd, ModToStc(paramMod), ModToStc(funcMod));
+    auto moveCtorBody = generateMoveCtorBody(sd);
+    ccd.fbody = moveCtorBody;
+    sd.members.push(ccd);
+    ccd.addMember(sc, sd);
+    const errors = global.startGagging();
+    Scope* sc2 = sc.push();
+    sc2.stc = 0;
+    sc2.linkage = LINK.d;
+    ccd.dsymbolSemantic(sc2);
+    ccd.semantic2(sc2);
+    ccd.semantic3(sc2);
+    //printf("ccd semantic: %s\n", ccd.type.toChars());
+    sc2.pop();
+    if (global.endGagging(errors) || sd.isUnionDeclaration())
+    {
+        ccd.storage_class |= STC.disable;
+        ccd.fbody = null;
+    }
+    return true;
+}
+
 }

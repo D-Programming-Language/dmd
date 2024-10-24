@@ -108,6 +108,8 @@ nothrow:
         const(char)* p = null;
         if (this == Id.ctor)
             p = "this";
+        else if (this == Id.moveCtor)
+            p = "=this";
         else if (this == Id.dtor)
             p = "~this";
         else if (this == Id.unitTest)

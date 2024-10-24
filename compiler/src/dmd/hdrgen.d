@@ -1965,7 +1965,10 @@ void toCBuffer(Dsymbol s, ref OutBuffer buf, ref HdrGenState hgs)
 public
 void toCharsMaybeConstraints(const TemplateDeclaration td, ref OutBuffer buf, ref HdrGenState hgs)
 {
-    buf.writestring(td.ident == Id.ctor ? "this" : td.ident.toString());
+    auto id = td.ident == Id.ctor     ? "this"  :
+              td.ident == Id.moveCtor ? "=this" :
+                                        td.ident.toString();
+    buf.writestring(id);
     buf.writeByte('(');
     foreach (i, const tp; *td.parameters)
     {
@@ -3942,7 +3945,7 @@ private void visitFuncIdentWithPrefix(TypeFunction t, const Identifier ident, Te
         if (str != "return" && str != "scope")
         {
             // don't write 'ref' for ctors
-            if ((ident == Id.ctor) && str == "ref")
+            if ((ident == Id.ctor || ident == Id.moveCtor) && str == "ref")
                 return;
             buf.writestring(str);
             buf.writeByte(' ');

@@ -5510,6 +5510,12 @@ elem *callfunc(const ref Loc loc,
                 bool copy = !(v && (v.isArgDtorVar || v.storage_class & STC.rvalue)); // copy unless the destructor is going to be run on it
                                                     // then assume the frontend took care of the copying and pass it by ref
 
+                if (0 && ea.Eoper == OPind && ea.E1.Eoper == OPcall && arg.type.isTypeStruct())
+                {
+                    if (auto ctor = fd.isCtorDeclaration())
+                        copy = ctor.isCpCtor;
+                }
+
                 elems[i] = addressElem(ea, arg.type, copy);
                 continue;
             }

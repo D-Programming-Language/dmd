@@ -1690,8 +1690,8 @@ FuncDeclaration doHeaderInstantiation(TemplateDeclaration td, TemplateInstance t
     }
 
     // function body and contracts are not need
-    if (fd.isCtorDeclaration())
-        fd = new CtorDeclaration(fd.loc, fd.endloc, fd.storage_class, fd.type.syntaxCopy());
+    if (auto ctor = fd.isCtorDeclaration())
+        fd = new CtorDeclaration(fd.loc, fd.endloc, fd.storage_class, fd.type.syntaxCopy(), ctor.isCpCtor, ctor.isMoveCtor);
     else
         fd = new FuncDeclaration(fd.loc, fd.endloc, fd.ident, fd.storage_class, fd.type.syntaxCopy());
     fd.parent = ti;

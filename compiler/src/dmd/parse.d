@@ -439,7 +439,15 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             case TOK.this_:
                 if (peekNext() == TOK.dot)
                     goto Ldeclaration;
-                s = parseCtor(pAttrs);
+                s = parseCtor(pAttrs, false);
+                break;
+
+            case TOK.assign:
+                if (peekNext() == TOK.this_)
+                {
+                    nextToken();
+                    s = parseCtor(pAttrs, true);
+                }
                 break;
 
             case TOK.tilde:
@@ -2426,7 +2434,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
      *      this(templateparameters)(parameters) { body }
      * Current token is 'this'.
      */
-    private AST.Dsymbol parseCtor(PrefixAttributes!AST* pAttrs)
+    private AST.Dsymbol parseCtor(PrefixAttributes!AST* pAttrs, bool isMoveCtor)
     {
         AST.Expressions* udas = null;
         const loc = token.loc;
@@ -2494,7 +2502,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         AST.Type tf = new AST.TypeFunction(parameterList, null, linkage, stc); // ReturnType -> auto
         tf = tf.addSTC(stc);
 
-        auto f = new AST.CtorDeclaration(loc, Loc.initial, stc, tf);
+        auto f = new AST.CtorDeclaration(loc, Loc.initial, stc, tf, false, isMoveCtor);
         AST.Dsymbol s = parseContracts(f, !!tpl);
         if (udas)
         {
