@@ -129,6 +129,7 @@ test_dmd() {
 
 # build and run druntime unit tests
 test_druntime() {
+    which make
     make -j$N -C druntime MODEL=$MODEL unittest
 }
 
