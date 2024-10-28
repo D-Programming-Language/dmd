@@ -30,7 +30,12 @@ if [ "$OS_NAME" == "linux" ]; then
 elif [ "$OS_NAME" == "osx" ]; then
   # upgrade GNU make
   brew install make
-  sudo ln -s /usr/local/opt/make/libexec/gnubin/make /usr/local/bin/make
+  for candidateDir in /usr/local/opt/make/libexec/gnubin /opt/homebrew/opt/make/libexec/gnubin; do
+    if [[ -f $candidateDir/make ]]; then
+      sudo ln -s $candidateDir/make /usr/local/bin/make
+      break
+    fi
+  done
 elif [ "$OS_NAME" == "freebsd" ]; then
   packages="git gmake devel/llvm12"
   if [ "$HOST_DMD" == "dmd-2.079.0" ] ; then
