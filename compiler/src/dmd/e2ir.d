@@ -1126,19 +1126,27 @@ elem* toElem(Expression e, ref IRState irs)
             elem *ezprefix = null;
             elem *ez = null;
 
-            if (ne.onstack)
+            if (ne.onstack || ne.placement)
             {
-                /* Create an instance of the class on the stack,
-                 * and call it stmp.
-                 * Set ex to be the &stmp.
-                 */
-                .type *tc = type_struct_class(tclass.sym.toChars(),
-                        tclass.sym.alignsize, tclass.sym.structsize,
-                        null, null,
-                        false, false, true, false);
-                tc.Tcount--;
-                Symbol *stmp = symbol_genauto(tc);
-                ex = el_ptr(stmp);
+                if (ne.placement)
+                {
+                    ex = toElem(ne.placement, irs);
+                    ex = addressElem(ex, ne.newtype.toBasetype(), false);
+                }
+                else
+                {
+                    /* Create an instance of the class on the stack,
+                     * and call it stmp.
+                     * Set ex to be the &stmp.
+                     */
+                    .type *tc = type_struct_class(tclass.sym.toChars(),
+                            tclass.sym.alignsize, tclass.sym.structsize,
+                            null, null,
+                            false, false, true, false);
+                    tc.Tcount--;
+                    Symbol *stmp = symbol_genauto(tc);
+                    ex = el_ptr(stmp);
+                }
 
                 Symbol *si = toInitializer(tclass.sym);
                 elem *ei = el_var(si);
@@ -1265,8 +1273,13 @@ elem* toElem(Expression e, ref IRState irs)
             elem *ezprefix = null;
             elem *ez = null;
 
-            // Call _d_newitemT()
-            if (auto lowering = ne.lowering)
+            if (ne.placement)
+            {
+                ex = toElem(ne.placement, irs);
+                ex = addressElem(ex, tclass, false);
+            }
+            else if (auto lowering = ne.lowering)
+                // Call _d_newitemT()
                 ex = toElem(ne.lowering, irs);
             else
                 assert(0, "This case should have been rewritten to `_d_newitemT` in the semantic phase");
@@ -1276,7 +1289,7 @@ elem* toElem(Expression e, ref IRState irs)
             elem *ev = el_same(ex);
 
             if (ne.argprefix)
-                    ezprefix = toElem(ne.argprefix, irs);
+                ezprefix = toElem(ne.argprefix, irs);
             if (ne.member)
             {
                 if (sd.isNested())
@@ -1308,10 +1321,12 @@ elem* toElem(Expression e, ref IRState irs)
             {
                 StructLiteralExp sle = StructLiteralExp.create(ne.loc, sd, ne.arguments, t);
                 ez = toElemStructLit(sle, irs, EXP.construct, ev.Vsym, false);
+                if (tybasic(ez.Ety) == TYstruct)
+                    ez = el_una(OPaddr, TYnptr, ez);
             }
             //elem_print(ex);
             //elem_print(ey);
-            //elem_print(ez);
+            //printf("ez:\n"); elem_print(ez);
 
             e = el_combine(ex, ey);
             e = el_combine(e, ew);
@@ -1331,8 +1346,16 @@ elem* toElem(Expression e, ref IRState irs)
         {
             elem *ezprefix = ne.argprefix ? toElem(ne.argprefix, irs) : null;
 
-            // call _d_newitemT()
-            e = toElem(ne.lowering, irs);
+            if (ne.placement)
+            {
+                e = toElem(ne.placement, irs);
+                e = addressElem(e, ne.newtype.toBasetype(), false);
+            }
+            else if (auto lowering = ne.lowering)
+                // Call _d_newitemT()
+                e = toElem(ne.lowering, irs);
+            else
+                assert(0, "This case should have been rewritten to `_d_newitemT` in the semantic phase");
 
             if (ne.arguments && ne.arguments.length == 1)
             {

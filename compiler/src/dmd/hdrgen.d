@@ -2404,6 +2404,13 @@ private void expressionPrettyPrint(Expression e, ref OutBuffer buf, ref HdrGenSt
             buf.writeByte('.');
         }
         buf.writestring("new ");
+        if (e.placement)
+        {
+            buf.writeByte('(');
+            expToBuffer(e.placement, PREC.assign, buf, hgs);
+            buf.writeByte(')');
+            buf.writeByte(' ');
+        }
         typeToBuffer(e.newtype, null, buf, hgs);
         if (e.arguments && e.arguments.length)
         {
@@ -2421,6 +2428,13 @@ private void expressionPrettyPrint(Expression e, ref OutBuffer buf, ref HdrGenSt
             buf.writeByte('.');
         }
         buf.writestring("new");
+        if (e.placement)
+        {
+            buf.writeByte(' ');
+            buf.writeByte('(');
+            expToBuffer(e.placement, PREC.assign, buf, hgs);
+            buf.writeByte(')');
+        }
         buf.writestring(" class ");
         if (e.arguments && e.arguments.length)
         {

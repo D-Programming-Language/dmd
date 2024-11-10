@@ -3008,6 +3008,8 @@ private bool reliesOnTemplateParameters(Expression e, TemplateParameter[] tparam
         override void visit(NewExp e)
         {
             //printf("NewExp.reliesOnTemplateParameters('%s')\n", e.toChars());
+            if (e.placement)
+                e.placement.accept(this);
             if (e.thisexp)
                 e.thisexp.accept(this);
             result = e.newtype.reliesOnTemplateParameters(tparams);

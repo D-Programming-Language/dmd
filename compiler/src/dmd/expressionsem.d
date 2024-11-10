@@ -3169,7 +3169,7 @@ private bool functionParameters(const ref Loc loc, Scope* sc,
                     auto args = new Expressions(nargs - i);
                     foreach (u; i .. nargs)
                         (*args)[u - i] = (*arguments)[u];
-                    arg = new NewExp(loc, null, p.type, args);
+                    arg = new NewExp(loc, null, null, p.type, args);
                     break;
                 }
             default:
@@ -4888,6 +4888,28 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             printf("\tnewtype: %s\n", exp.newtype.toChars());
         }
 
+        if (exp.placement)
+        {
+            exp.placement = exp.placement.expressionSemantic(sc);
+            auto p = exp.placement;
+            if (p.op == EXP.error)
+                return setError();
+            if (!p.isLvalue())
+            {
+                error(p.loc, "PlacementExpression `%s` is an rvalue, but must be an lvalue", p.toChars());
+                return setError();
+            }
+            if (sc.setUnsafe(false, p.loc, "`@safe` function `%s` cannot use placement `new`", sc.func))
+            {
+                return setError();
+            }
+	    if (!exp.placement.type.isNaked())
+            {
+                error(p.loc, "PlacementExpression `%s` of type `%s` be unshared and mutable", p.toChars(), toChars(p.type));
+                return setError();
+            }
+        }
+
         //for error messages if the argument in [] is not convertible to size_t
         const originalNewtype = exp.newtype;
 
@@ -4974,6 +4996,19 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             return setError();
         }
 
+        uinteger_t placementSize;
+        if (exp.placement)
+        {
+            placementSize = size(exp.placement.type, exp.placement.loc);
+            auto objectSize = size(tb, exp.placement.loc);
+            //printf("placementSize: %lld objectSize: %lld\n", placementSize, objectSize);
+            if (!tb.isTypeClass && placementSize < objectSize)
+            {
+                error(exp.placement.loc, "new placement size %llu must be >= object size %llu", placementSize, objectSize);
+                return setError();
+            }
+        }
+
         const size_t nargs = exp.arguments ? exp.arguments.length : 0;
         Expression newprefix = null;
 
@@ -4982,9 +5017,14 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             auto cd = tc.sym;
             if (cd.errors)
                 return setError();
-            cd.size(exp.loc);
+            auto objectSize = cd.size(exp.loc);
             if (cd.sizeok != Sizeok.done)
                 return setError();
+            if (exp.placement && placementSize < objectSize)
+            {
+                error(exp.placement.loc, "new placement size %llu must be >= class object size %llu", placementSize, objectSize);
+                return setError();
+            }
             if (!cd.ctor)
                 cd.ctor = cd.searchCtor();
             if (cd.noDefaultCtor && !nargs && !cd.defaultCtor)
@@ -5194,6 +5234,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
                 return;
             }
             else if (sc.needsCodegen() && // interpreter doesn't need this lowered
+		     !exp.placement &&
                      !exp.onstack && !exp.type.isScopeClass()) // these won't use the GC
             {
                 /* replace `new T(arguments)` with `core.lifetime._d_newclassT!T(arguments)`
@@ -5307,10 +5348,16 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             }
 
             exp.type = exp.type.pointerTo();
-            tryLowerToNewItem(exp);
+	    if (!exp.placement)
+		tryLowerToNewItem(exp);
         }
         else if (tb.ty == Tarray)
         {
+            if (exp.placement)
+            {
+                error(exp.placement.loc, "placement new cannot be used with dynamic arrays");
+                return setError();
+            }
             if (!nargs)
             {
                 // https://issues.dlang.org/show_bug.cgi?id=20422
@@ -5381,7 +5428,10 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
                     goto LskipNewArrayLowering;
             }
 
-            if (nargs == 1)
+	    if (exp.placement)	// no need to lower
+	    {
+	    }
+            else if (nargs == 1)
             {
                 auto hook = global.params.tracegc ? Id._d_newarrayTTrace : Id._d_newarrayT;
                 if (!verifyHookExist(exp.loc, *sc, hook, "new array"))
@@ -5481,10 +5531,16 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             }
 
             exp.type = exp.type.pointerTo();
-            tryLowerToNewItem(exp);
+            if (!exp.placement)
+		tryLowerToNewItem(exp);
         }
         else if (tb.ty == Taarray)
         {
+            if (exp.placement)
+            {
+                error(exp.placement.loc, "placement new cannot be used with associative arrays");
+                return setError();
+            }
             // e.g. `new Alias(args)`
             if (nargs)
             {
@@ -5534,7 +5590,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             sds.members.push(e.cd);
         }
 
-        Expression n = new NewExp(e.loc, e.thisexp, e.cd.type, e.arguments);
+        Expression n = new NewExp(e.loc, e.placement, e.thisexp, e.cd.type, e.arguments);
 
         Expression c = new CommaExp(e.loc, d, n);
         result = c.expressionSemantic(sc);
@@ -14935,6 +14991,8 @@ bool checkSharedAccess(Expression e, Scope* sc, bool returnRef = false)
 
         bool visitNew(NewExp e)
         {
+            if (e.placement)
+                check(e.placement, false);
             if (e.thisexp)
                 check(e.thisexp, false);
             return false;
@@ -15118,6 +15176,8 @@ Expression resolveLoc(Expression exp, const ref Loc loc, Scope* sc)
 
     Expression visitNew(NewExp exp)
     {
+        if (exp.placement)
+            exp.placement = exp.placement.resolveLoc(loc, sc);
         if (exp.thisexp)
             exp.thisexp = exp.thisexp.resolveLoc(loc, sc);
         if (exp.argprefix)

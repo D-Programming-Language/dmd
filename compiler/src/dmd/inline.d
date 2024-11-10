@@ -34,6 +34,7 @@ import dmd.errors;
 import dmd.func;
 import dmd.funcsem;
 import dmd.globals;
+import dmd.hdrgen;
 import dmd.id;
 import dmd.identifier;
 import dmd.init;
@@ -736,6 +737,7 @@ public:
                         goto LhasLowering;
                     }
 
+            ne.placement = doInlineAs!Expression(e.placement, ids);
             ne.thisexp = doInlineAs!Expression(e.thisexp, ids);
             ne.argprefix = doInlineAs!Expression(e.argprefix, ids);
             ne.arguments = arrayExpressionDoInline(e.arguments);
@@ -1001,7 +1003,7 @@ public:
     {
         static if (LOG)
         {
-            printf("ExpStatement.inlineScan(%s)\n", s.toChars());
+            printf("ExpStatement.inlineScan(%s)\n", toChars(s));
         }
         if (!s.exp)
             return;
@@ -2202,7 +2204,7 @@ private void expandInline(Loc callLoc, FuncDeclaration fd, FuncDeclaration paren
 
         static if (EXPANDINLINE_LOG)
             printf("\n[%s] %s expandInline sresult =\n%s\n",
-                callLoc.toChars(), fd.toPrettyChars(), sresult.toChars());
+                callLoc.toChars(), fd.toPrettyChars(), toChars(sresult));
     }
     else
     {

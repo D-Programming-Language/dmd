@@ -1637,6 +1637,9 @@ void escapeExp(Expression e, ref scope EscapeByResults er, int deref)
 
     void visitNew(NewExp e)
     {
+        if (e.placement)
+            escapeExp(e.placement, er, deref);
+
         Type tb = e.newtype.toBasetype();
         if (tb.isTypeStruct() && !e.member && e.arguments)
         {
