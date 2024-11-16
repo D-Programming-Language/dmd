@@ -50,16 +50,16 @@ jobs:
             host_dmd: gdmd-9
             disable_debug_for_dmd_unittests: true # no `-debug` - host frontend too old
           # macOS
-          - job_name: macOS 13 x64, DMD (latest)
-            os: macos-13
+          - job_name: macOS 14 x64, DMD (latest)
+            os: macos-14
             host_dmd: dmd
           # Disabled because of failure https://issues.dlang.org/show_bug.cgi?id=24518
-          # - job_name: macOS 13 x64, DMD (coverage)
-          #   os: macos-13
+          # - job_name: macOS 14 x64, DMD (coverage)
+          #   os: macos-14
           #   host_dmd: dmd
           #   coverage: true
-          - job_name: macOS 12 x64, DMD (bootstrap)
-            os: macos-12
+          - job_name: macOS 13 x64, DMD (bootstrap)
+            os: macos-13
             # de-facto bootstrap version on OSX
             # See: https://github.com/dlang/dmd/pull/13890
             host_dmd: dmd-2.099.1
@@ -100,12 +100,10 @@ jobs:
         if: runner.os != 'Windows'
         run: ${{ runner.os == 'macOS' && 'ci/cirrusci.sh' || 'sudo -E ci/cirrusci.sh' }}
 
-      # NOTE: Linker ICEs with Xcode 15.0.1 (default version on macos-13)
-      # * https://issues.dlang.org/show_bug.cgi?id=24407
-      # Remove this step if the default gets changed to 15.1 in actions/runner-images.
-      - name: 'macOS 13: Switch to Xcode v15.1'
+      # NOTE: the Xcode 15 linker complains about 'symbol count from symbol table and dynamic symbol table differ' with bootstrap DMD
+      - name: 'macOS 13: Switch to Xcode v14.3.1'
         if: matrix.os == 'macos-13'
-        run: sudo xcode-select -switch /Applications/Xcode_15.1.app
+        run: sudo xcode-select -switch /Applications/Xcode_14.3.app
 
       - name: 'Posix: Install host compiler'
         if: runner.os != 'Windows'
