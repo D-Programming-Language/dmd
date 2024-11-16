@@ -1,0 +1,3 @@
+Enabled -preview=rvaluerefparam after a long testing period.
+
+You can now supply an rvalue to a ref argument. A temporary will automatically be created for the call.

@@ -946,6 +946,9 @@ dmd -cov -unittest myprog.d
         Feature("dtorfields", "dtorFields", "don't destruct fields of partially constructed objects"),
         Feature("fieldwise", "fieldwise", "don't use fieldwise comparisons for struct equality",
             "https://dlang.org/changelog/2.085.0.html#no-cmpsb"),
+        Feature("rvaluerefparam", "rvalueRefParam",
+                "revert rvalue arguments to ref parameters",
+                "https://gist.github.com/andralex/e5405a5d773f07f73196c05f8339435a"),
     ];
 
     /// Returns all available previews
@@ -976,9 +979,6 @@ dmd -cov -unittest myprog.d
         Feature("dtorfields", "dtorFields",
             "destruct fields of partially constructed objects",
             "https://dlang.org/changelog/2.098.0.html#dtorfileds", false, false),
-        Feature("rvaluerefparam", "rvalueRefParam",
-            "enable rvalue arguments to ref parameters",
-            "https://gist.github.com/andralex/e5405a5d773f07f73196c05f8339435a"),
         Feature("safer", "safer",
             "more safety checks by default",
             "https://github.com/WalterBright/documents/blob/38f0a846726b571f8108f6e63e5e217b91421c86/safer.md", true, false),
