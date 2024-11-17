@@ -1,6 +1,6 @@
 /*
 https://issues.dlang.org/show_bug.cgi?id=20704
-REQUIRED_ARGS: -preview=rvaluerefparam
+REQUIRED_ARGS:
  */
 
 void f1(T)(const auto ref T arg = T.init) {}

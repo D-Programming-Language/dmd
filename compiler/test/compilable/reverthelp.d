@@ -10,5 +10,6 @@ Revertable language changes listed by -revert=name:
   =intpromote       revert integral promotions for unary + - ~ operators
   =dtorfields       don't destruct fields of partially constructed objects
   =fieldwise        don't use fieldwise comparisons for struct equality (https://dlang.org/changelog/2.085.0.html#no-cmpsb)
+  =rvaluerefparam   revert rvalue arguments to ref parameters (https://gist.github.com/andralex/e5405a5d773f07f73196c05f8339435a)
 ----
 */

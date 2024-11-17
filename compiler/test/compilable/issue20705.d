@@ -1,4 +1,4 @@
-// REQUIRED_ARGS: -preview=rvaluerefparam
+// REQUIRED_ARGS:
 struct Foo
 {
     int[] a;
