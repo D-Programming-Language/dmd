@@ -588,7 +588,8 @@ Expression semanticTraits(TraitsExp e, Scope* sc)
             ts.sym.dsymbolSemantic(sc);
         }
 
-        return isCopyable(t) ? True() : False();
+        FuncDeclaration f;
+        return isCopyable(t, f) ? True() : False();
     }
 
     if (e.ident == Id.isNested)

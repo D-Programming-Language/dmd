@@ -3286,9 +3286,10 @@ private bool functionParameters(const ref Loc loc, Scope* sc,
             }
             else if (p.storageClass & STC.ref_)
             {
+                FuncDeclaration f;
                 if (global.params.rvalueRefParam == FeatureState.enabled &&
                     !arg.isLvalue() &&
-                    targ.isCopyable())
+                    targ.isCopyable(f))
                 {   /* allow rvalues to be passed to ref parameters by copying
                      * them to a temp, then pass the temp as the argument
                      */

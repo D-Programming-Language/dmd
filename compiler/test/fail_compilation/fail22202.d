@@ -3,9 +3,10 @@
 /*
 TEST_OUTPUT:
 ---
-fail_compilation/fail22202.d(22): Error: function `fun` is not callable using argument types `(SystemCopy)`
-fail_compilation/fail22202.d(22):        `inout ref inout(SystemCopy)(ref inout(SystemCopy) other)` copy constructor cannot be called from a `pure @safe nogc` context
-fail_compilation/fail22202.d(17):        `fail22202.fun(SystemCopy __param_0)` declared here
+fail_compilation/fail22202.d(23): Error: `pure` function `D main` cannot call impure copy constructor `fail22202.SystemCopy.this`
+fail_compilation/fail22202.d(23): Error: `@safe` function `D main` cannot call `@system` copy constructor `fail22202.SystemCopy.this`
+fail_compilation/fail22202.d(15):        `fail22202.SystemCopy.this` is declared here
+fail_compilation/fail22202.d(23): Error: `@nogc` function `D main` cannot call non-@nogc copy constructor `fail22202.SystemCopy.this`
 ---
 */
 

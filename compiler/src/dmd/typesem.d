@@ -437,10 +437,11 @@ private Dsymbol searchX(Dsymbol dsym, const ref Loc loc, Scope* sc, RootObject i
  * Determine if type t is copyable.
  * Params:
  *      t = type to check
+ *      f = set to constructor that would be called, if any
  * Returns:
  *      true if we can copy it
  */
-bool isCopyable(Type t)
+bool isCopyable(Type t, out FuncDeclaration f)
 {
     //printf("isCopyable() %s\n", t.toChars());
     if (auto ts = t.isTypeStruct())
@@ -458,7 +459,7 @@ bool isCopyable(Type t)
             el.type = cast() ts;
             Expressions* args = new Expressions();
             args.push(el);
-            FuncDeclaration f = resolveFuncCall(Loc.initial, null, ctor, null, cast()ts, ArgumentList(args), FuncResolveFlag.quiet);
+            f = resolveFuncCall(Loc.initial, null, ctor, null, cast()ts, ArgumentList(args), FuncResolveFlag.quiet);
             if (!f || f.storage_class & STC.disable)
                 return false;
         }
@@ -894,14 +895,35 @@ extern (D) MATCH callMatch(TypeFunction tf, Type tthis, ArgumentList argumentLis
 private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
     Expression arg, Type tprm, Scope* sc, const(char)** pMessage)
 {
+    //printf("isCopyConstructible()\n");
+    FuncDeclaration f;
+
+    bool b1 = isCopyable(argStruct.type, f);
+
     auto tmp = new VarDeclaration(arg.loc, tprm, Identifier.generateId("__copytmp"), null);
     tmp.storage_class = STC.rvalue | STC.temp | STC.ctfe;
     tmp.dsymbolSemantic(sc);
     Expression ve = new VarExp(arg.loc, tmp);
-    Expression e = new DotIdExp(arg.loc, ve, Id.ctor);
-    e = new CallExp(arg.loc, e, arg);
+    Expression ex = new DotIdExp(arg.loc, ve, Id.ctor);
+    Expression e = new CallExp(arg.loc, ex, arg);
     //printf("e = %s\n", e.toChars());
-    if (dmd.expressionsem.trySemantic(e, sc))
+
+    bool b2 = dmd.expressionsem.trySemantic(e, sc) !is null;
+
+    if (b1 != b2)
+    {
+        fprintf(stderr, "b1: %d b2: %d\n", b1, b2);
+	fprintf(stderr, "argStruct.type: %s\n", toChars(argStruct.type));
+	fprintf(stderr, "arg: %s\n", arg.toChars());
+	fprintf(stderr, "arg.type: %s\n", toChars(arg.type));
+        fprintf(stderr, "tprm: %s\n", toChars(tprm));
+        fprintf(stderr, "ex: %s\n", ex.toChars());
+        fprintf(stderr, "e: %s\n", e.toChars());
+        fprintf(stderr, "e.type: %s\n", toChars(e.type));
+	if (f)
+	    fprintf(stderr, "f: %s\n", toChars(f.type));
+    }
+    if (b1)
         return true;
 
     if (!pMessage)
@@ -916,7 +938,7 @@ private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
      * such as purity, safety or nogc.
      */
     OutBuffer buf;
-    auto callExp = e.isCallExp();
+//    auto callExp = e.isCallExp();
 
     bool nocpctor()
     {
@@ -926,7 +948,7 @@ private extern(D) bool isCopyConstructorCallable (StructDeclaration argStruct,
         return false;
     }
 
-    auto f = callExp.f;
+//    auto f = callExp.f;
     if (!f)
         return nocpctor();
 
@@ -1055,6 +1077,7 @@ private extern(D) MATCH argumentMatchParameter (TypeFunction tf, Parameter p,
             return MATCH.nomatch;
         }
 
+        FuncDeclaration f;
         if (arg.op == EXP.string_ && tp.ty == Tsarray)
         {
             if (ta.ty != Tsarray)
@@ -1089,7 +1112,7 @@ private extern(D) MATCH argumentMatchParameter (TypeFunction tf, Parameter p,
         }
         else if (global.params.rvalueRefParam != FeatureState.enabled ||
                  p.storageClass & STC.out_ ||
-                 !arg.type.isCopyable())  // can't copy to temp for ref parameter
+                 !arg.type.isCopyable(f))  // can't copy to temp for ref parameter
         {
             if (pMessage) *pMessage = tf.getParamError(arg, p);
             return MATCH.nomatch;

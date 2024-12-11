@@ -2,11 +2,7 @@
 REQUIRED_ARGS: -verrors=spec
 TEST_OUTPUT:
 ---
-(spec:2) compilable/test23097.d(14): Error: `inout` constructor `test23097.S23097.this` creates const object, not mutable
-(spec:2) compilable/test23097.d(14): Error: `inout` constructor `test23097.S23097.this` creates const object, not mutable
-(spec:1) compilable/test23097.d(14): Error: generated function `test23097.S23097.opAssign(S23097 p)` is not callable using argument types `(const(S23097))`
-(spec:2) compilable/test23097.d(14): Error: `inout` constructor `test23097.S23097.this` creates const object, not mutable
-(spec:1) compilable/test23097.d(14):        `struct S23097` does not define a copy constructor for `const(S23097)` to `S23097` copies
+(spec:1) compilable/test23097.d(10): Error: `inout` constructor `test23097.S23097.this` creates const object, not mutable
 ---
 */
 void emplaceRef(UT, Args)(UT chunk, Args args)
