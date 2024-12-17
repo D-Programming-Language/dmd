@@ -2,7 +2,7 @@
 /*
 TEST_OUTPUT:
 ---
-compilable/interpret3.d(6350): Deprecation: identity comparison of static arrays implicitly coerces them to slices, which are compared by reference
+compilable/interpret3.d(6337): Deprecation: identity comparison of static arrays implicitly coerces them to slices, which are compared by reference
 ---
 */
 
@@ -5293,23 +5293,10 @@ static assert(bug7245(0) == 6);
 static assert(bug7245(1) == 5);
 
 /**************************************************/
-// https://issues.dlang.org/show_bug.cgi?id=8498
-// modifying foreach
 // https://issues.dlang.org/show_bug.cgi?id=7658
 // foreach ref
 // https://issues.dlang.org/show_bug.cgi?id=8539
 // nested funcs, ref param, -inline
-
-int bug8498()
-{
-    foreach (ref i; 0 .. 5)
-    {
-        assert(i == 0);
-        i = 100;
-    }
-    return 1;
-}
-static assert(bug8498());
 
 string bug7658()
 {

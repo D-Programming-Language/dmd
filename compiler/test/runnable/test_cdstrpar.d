@@ -193,7 +193,7 @@ alias baselineCases = AliasSeq!(
 bool matches(const(ubyte)[] code, const(ubyte)[] exp)
 {
     assert(code.length == exp.length);
-    foreach (ref i; 0 .. code.length)
+    for (size_t i = 0; i < code.length; i++)
     {
         if (code[i] == exp[i])
             continue;

@@ -989,6 +989,22 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
                     return retError();
                 }
 
+                if (dim == 2)
+                {
+                    auto p0 = (*fs.parameters)[0];
+                    if (p0.storageClass & STC.ref_ &&
+                        !(p0.storageClass & (STC.const_ | STC.immutable_)))
+                    {
+                        // @@@DEPRECATED_2.119@@@
+                        // turn deprecation into an error & uncomment return
+                        deprecation(fs.loc, "`foreach` array index variable `%s` cannot be `ref`",
+                            p0.toChars());
+                        deprecationSupplemental(fs.loc, "either make `%s` const or use a `for` loop instead",
+                            p0.toChars());
+                        //return retError();
+                    }
+                }
+
                 // Finish semantic on all foreach parameter types.
                 foreach (i; 0 .. dim)
                 {
@@ -1450,6 +1466,18 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
     {
         /* https://dlang.org/spec/statement.html#foreach-range-statement
          */
+
+        if (fs.prm.storageClass & STC.ref_ &&
+            !(fs.prm.storageClass & (STC.const_ | STC.immutable_)))
+        {
+            // @@@DEPRECATED_2.119@@@
+            // turn deprecation into an error & uncomment return
+            deprecation(fs.loc, "`foreach` range variable `%s` cannot be `ref`",
+                fs.prm.toChars());
+            deprecationSupplemental(fs.loc, "either make `%s` const or use a `for` loop instead",
+                fs.prm.toChars());
+            //return setError();
+        }
 
         //printf("ForeachRangeStatement::semantic() %p\n", fs);
         auto loc = fs.loc;

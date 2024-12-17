@@ -348,7 +348,7 @@ void test6659()
         static size_t _dtor;
     }
 
-    foreach (ref iter; Iter(0) .. Iter(10))
+    foreach (ref const iter; Iter(0) .. Iter(10))
     {
         assert(Iter._dtor == 0);
     }
@@ -528,19 +528,9 @@ void test6652()
     assert(sum == 45);
 
     sum = 0;
-    foreach (ref i; 0 .. 10)
-        sum += i++; // 02468
-    assert(sum == 20);
-
-    sum = 0;
     foreach_reverse (i; 0 .. 10)
         sum += i--; // 9876543210
     assert(sum == 45);
-
-    sum = 0;
-    foreach_reverse (ref i; 0 .. 10)
-        sum += i--; // 97531
-    assert(sum == 25);
 
     enum ary = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     sum = 0;
@@ -552,28 +542,12 @@ void test6652()
     assert(sum == 45);
 
     sum = 0;
-    foreach (ref i, v; ary)
-    {
-        assert(i == v);
-        sum += i++; // 02468
-    }
-    assert(sum == 20);
-
-    sum = 0;
     foreach_reverse (i, v; ary)
     {
         assert(i == v);
         sum += i--; // 9876543210
     }
     assert(sum == 45);
-
-    sum = 0;
-    foreach_reverse (ref i, v; ary)
-    {
-        assert(i == v);
-        sum += i--; // 97531
-    }
-    assert(sum == 25);
 
     static struct Iter
     {
@@ -601,21 +575,11 @@ void test6652()
         sum += v._pos++; // 0123456789
     assert(sum == 45 && Iter._dtorCount == 12);
 
-    Iter._dtorCount = sum = 0;
-    foreach (ref v; Iter(0) .. Iter(10))
-        sum += v._pos++; // 02468
-    assert(sum == 20 && Iter._dtorCount == 2);
-
     // additional dtor calls due to unnecessary postdecrements
     Iter._dtorCount = sum = 0;
     foreach_reverse (v; Iter(0) .. Iter(10))
         sum += v._pos--; // 9876543210
     assert(sum == 45 && Iter._dtorCount >= 12);
-
-    Iter._dtorCount = sum = 0;
-    foreach_reverse (ref v; Iter(0) .. Iter(10))
-        sum += v._pos--; // 97531
-    assert(sum == 25 && Iter._dtorCount >= 2);
 }
 
 /***************************************/

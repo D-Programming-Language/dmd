@@ -1,4 +1,4 @@
-// PERMUTE_ARGS: -w -dw -de -d
+// REQUIRED_ARGS: -de
 
 /******************************************/
 // https://issues.dlang.org/show_bug.cgi?id=6652

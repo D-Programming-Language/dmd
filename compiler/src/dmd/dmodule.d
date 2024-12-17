@@ -1484,7 +1484,7 @@ private const(char)[] processSource (const(ubyte)[] src, Module mod)
         dbuf.reserve(eBuf.length);
 
         //i will be incremented in the loop for high codepoints
-        foreach (ref i; 0 .. eBuf.length)
+        for (size_t i = 0; i < eBuf.length; i++)
         {
             uint u = readNext(&eBuf[i]);
             if (u & ~0x7F)

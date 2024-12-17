@@ -82,24 +82,10 @@ void test4090b()
         foreach (    const i, x; arr) static assert(is(typeof(i) == const size_t));
         foreach (immutable i, x; arr) static assert(is(typeof(i) == immutable size_t));
 
-        // inference + qualifier + ref
-        foreach (          ref i, x; arr) static assert(is(typeof(i) == size_t));
-        foreach (    const ref i, x; arr) static assert(is(typeof(i) == const size_t));
-      static assert(!__traits(compiles, {
-        foreach (immutable ref i, x; arr) {}
-      }));
-
         // with exact type + qualifier
         foreach (          size_t i, x; arr) static assert(is(typeof(i) == size_t));
         foreach (    const size_t i, x; arr) static assert(is(typeof(i) == const size_t));
         foreach (immutable size_t i, x; arr) static assert(is(typeof(i) == immutable size_t));
-
-        // with exact type + qualifier + ref
-        foreach (          ref size_t i, x; arr) static assert(is(typeof(i) == size_t));
-        foreach (    const ref size_t i, x; arr) static assert(is(typeof(i) == const size_t));
-      static assert(!__traits(compiles, {
-        foreach (immutable ref size_t i, x; arr) {}
-      }));
     }
 
     // for the mutable elements
@@ -200,19 +186,7 @@ void test4090c()
     foreach (    const int x; 1..11) static assert(is(typeof(x) == const int));
     foreach (immutable int x; 1..11) static assert(is(typeof(x) == immutable int));
 
-    foreach (          ref x; 1..11) static assert(is(typeof(x) == int));
-    foreach (    const ref x; 1..11) static assert(is(typeof(x) == const int));
-  static assert(!__traits(compiles, {
-    foreach (immutable ref x; 1..11) {}
-  }));
-
     foreach (          double x; 1..11) static assert(is(typeof(x) == double));
     foreach (    const double x; 1..11) static assert(is(typeof(x) == const double));
     foreach (immutable double x; 1..11) static assert(is(typeof(x) == immutable double));
-
-    foreach (          ref double x; 1..11) static assert(is(typeof(x) == double));
-    foreach (    const ref double x; 1..11) static assert(is(typeof(x) == const double));
-  static assert(!__traits(compiles, {
-    foreach (immutable ref double x; 1..11) {}
-  }));
 }
