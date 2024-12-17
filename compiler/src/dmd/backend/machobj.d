@@ -474,12 +474,12 @@ Obj MachObj_init(OutBuffer *objbuf, const(char)* filename, const(char)* csegname
     SegData.reset();   // recycle memory
     SegData.push();    // element 0 is reserved
 
-    int align_ = I64 ? 4 : 2;            // align to 16 bytes for floating point
+    int p2align = I64 ? 4 : 2;            // align to 16 bytes for floating point
     MachObj_getsegment("__text",  "__TEXT", 2, S_REGULAR | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS);
-    MachObj_getsegment("__data",  "__DATA", align_, S_REGULAR);     // DATA
-    MachObj_getsegment("__const", "__TEXT", 2, S_REGULAR);         // CDATA
-    MachObj_getsegment("__bss",   "__DATA", 4, S_ZEROFILL);        // UDATA
-    MachObj_getsegment("__const", "__DATA", align_, S_REGULAR);     // CDATAREL
+    MachObj_getsegment("__data",  "__DATA", p2align, S_REGULAR);    // DATA
+    MachObj_getsegment("__const", "__TEXT", 2, S_REGULAR);          // CDATA
+    MachObj_getsegment("__bss",   "__DATA", 4, S_ZEROFILL);         // UDATA
+    MachObj_getsegment("__const", "__DATA", p2align, S_REGULAR);    // CDATAREL
 
     dwarf_initfile(filename);
     return obj;
@@ -1308,18 +1308,18 @@ void MachObj_term(const(char)[] objfilename)
         sym.n_strx = mach_addmangled(c.sym);
         sym.n_value = c.size * c.count;
         sym.n_type = N_EXT | N_UNDF;
-        int align_;
+        int p2align;
         if (c.size < 2)
-            align_ = 0;          // align_ is expressed as power of 2
+            p2align = 0;          // p2align is expressed as power of 2
         else if (c.size < 4)
-            align_ = 1;
+            p2align = 1;
         else if (c.size < 8)
-            align_ = 2;
+            p2align = 2;
         else if (c.size < 16)
-            align_ = 3;
+            p2align = 3;
         else
-            align_ = 4;
-        sym.n_desc = cast(ushort)(align_ << 8);
+            p2align = 4;
+        sym.n_desc = cast(ushort)(p2align << 8);
         sym.n_sect = 0;
         if (I64)
             fobjbuf.write(&sym, sym.sizeof);
@@ -1583,11 +1583,11 @@ void MachObj_staticdtor(Symbol *s)
 @trusted
 void MachObj_setModuleCtorDtor(Symbol *sfunc, bool isCtor)
 {
-    const align_ = I64 ? 3 : 2; // align to _tysize[TYnptr]
+    const p2align = I64 ? 3 : 2; // align to _tysize[TYnptr]
 
     IDXSEC seg = isCtor
-                ? getsegment2(seg_mod_init_func, "__mod_init_func", "__DATA", align_, S_MOD_INIT_FUNC_POINTERS)
-                : getsegment2(seg_mod_term_func, "__mod_term_func", "__DATA", align_, S_MOD_TERM_FUNC_POINTERS);
+                ? getsegment2(seg_mod_init_func, "__mod_init_func", "__DATA", p2align, S_MOD_INIT_FUNC_POINTERS)
+                : getsegment2(seg_mod_term_func, "__mod_term_func", "__DATA", p2align, S_MOD_TERM_FUNC_POINTERS);
 
     const int relflags = I64 ? CFoff | CFoffset64 : CFoff;
     const int sz = MachObj_reftoident(seg, SegData[seg].SDoffset, sfunc, 0, relflags);
@@ -1610,9 +1610,9 @@ void MachObj_ehtables(Symbol *sfunc,uint size,Symbol *ehsym)
      * otherwise the duplicates aren't removed.
      */
 
-    int align_ = I64 ? 3 : 2;            // align to _tysize[TYnptr]
+    int p2align = I64 ? 3 : 2;            // align to _tysize[TYnptr]
     // The size is (FuncTable).sizeof in deh2.d
-    int seg = getsegment2(seg_deh_eh, "__deh_eh", "__DATA", align_, S_REGULAR);
+    int seg = getsegment2(seg_deh_eh, "__deh_eh", "__DATA", p2align, S_REGULAR);
 
     OutBuffer *buf = SegData[seg].SDbuf;
     if (I64)
@@ -1658,7 +1658,7 @@ int MachObj_comdat(Symbol *s)
 {
     const(char)* sectname;
     const(char)* segname;
-    int align_;
+    int p2align;
     int flags;
 
     //printf("MachObj_comdat(Symbol* %s)\n",s.Sident.ptr);
@@ -1669,37 +1669,37 @@ int MachObj_comdat(Symbol *s)
     {
         sectname = "__textcoal_nt";
         segname = "__TEXT";
-        align_ = 2;              // 4 byte alignment
+        p2align = 2;              // 4 byte alignment
         flags = S_COALESCED | S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS;
-        s.Sseg = getsegment2(seg_textcoal_nt, sectname, segname, align_, flags);
+        s.Sseg = getsegment2(seg_textcoal_nt, sectname, segname, p2align, flags);
     }
     else if ((s.ty() & mTYLINK) == mTYweakLinkage)
     {
         s.Sfl = FLdata;
-        align_ = 4;              // 16 byte alignment
-        MachObj_data_start(s, 1 << align_, s.Sseg);
+        p2align = 4;              // 16 byte alignment
+        MachObj_data_start(s, 1 << p2align, s.Sseg);
     }
     else if ((s.ty() & mTYLINK) == mTYthread)
     {
         s.Sfl = FLtlsdata;
-        align_ = 4;
+        p2align = 4;
         if (I64)
             s.Sseg = objmod.tlsseg().SDseg;
         else
-            s.Sseg = getsegment2(seg_tlscoal_nt, "__tlscoal_nt", "__DATA", align_, S_COALESCED);
-        MachObj_data_start(s, 1 << align_, s.Sseg);
+            s.Sseg = getsegment2(seg_tlscoal_nt, "__tlscoal_nt", "__DATA", p2align, S_COALESCED);
+        MachObj_data_start(s, 1 << p2align, s.Sseg);
     }
     else
     {
         s.Sfl = FLdata;
         sectname = "__datacoal_nt";
         segname = "__DATA";
-        align_ = 4;              // 16 byte alignment
-        s.Sseg = getsegment2(seg_datacoal_nt, sectname, segname, align_, S_COALESCED);
-        MachObj_data_start(s, 1 << align_, s.Sseg);
+        p2align = 4;              // 16 byte alignment
+        s.Sseg = getsegment2(seg_datacoal_nt, sectname, segname, p2align, S_COALESCED);
+        MachObj_data_start(s, 1 << p2align, s.Sseg);
     }
                                 // find or create new segment
-    if (s.Salignment > (1 << align_))
+    if (s.Salignment > (1 << p2align))
         SegData[s.Sseg].SDalignment = s.Salignment;
     s.Soffset = SegData[s.Sseg].SDoffset;
     if (s.Sfl == FLdata || s.Sfl == FLtlsdata)
@@ -1728,13 +1728,13 @@ int MachObj_jmpTableSegment(Symbol *s)
 /**********************************
  * Get segment.
  * Input:
- *      align_   segment alignment as power of 2
+ *      p2align  segment alignment as power of 2
  * Returns:
  *      segment index of found or newly created segment
  */
 @trusted
 int MachObj_getsegment(const(char)* sectname, const(char)* segname,
-        int align_, int flags)
+        int p2align, int flags)
 {
     assert(strlen(sectname) <= 16);
     assert(strlen(segname)  <= 16);
@@ -1799,7 +1799,7 @@ int MachObj_getsegment(const(char)* sectname, const(char)* segname,
             SECbuf.writezeros(section_64.sizeof);
         strncpy(sec.sectname.ptr, sectname, 16);
         strncpy(sec.segname.ptr, segname, 16);
-        sec._align = align_;
+        sec._align = p2align;
         sec.flags = flags;
     }
     else
@@ -1808,7 +1808,7 @@ int MachObj_getsegment(const(char)* sectname, const(char)* segname,
             SECbuf.writezeros(section.sizeof);
         strncpy(sec.sectname.ptr, sectname, 16);
         strncpy(sec.segname.ptr, segname, 16);
-        sec._align = align_;
+        sec._align = p2align;
         sec.flags = flags;
     }
 
@@ -1826,16 +1826,16 @@ int MachObj_getsegment(const(char)* sectname, const(char)* segname,
  *      seg = value to memoize if it is not already set
  *      sectname = section name
  *      segname = segment name
- *      align_ = section alignment
+ *      p2align = section alignment as power of 2
  *      flags = S_????
  * Returns:
  *      seg index
  */
 int getsegment2(ref int seg, const(char)* sectname, const(char)* segname,
-        int align_, int flags)
+        int p2align, int flags)
 {
     if (seg == UNKNOWN)
-        seg = MachObj_getsegment(sectname, segname, align_, flags);
+        seg = MachObj_getsegment(sectname, segname, p2align, flags);
     return seg;
 }
 
@@ -2694,9 +2694,9 @@ int elf_align(targ_size_t size, int foffset)
 @trusted
 void MachObj_moduleinfo(Symbol *scc)
 {
-    int align_ = I64 ? 3 : 2; // align to _tysize[TYnptr]
+    int p2align = I64 ? 3 : 2; // align to _tysize[TYnptr]
 
-    int seg = MachObj_getsegment("__minfodata", "__DATA", align_, S_REGULAR);
+    int seg = MachObj_getsegment("__minfodata", "__DATA", p2align, S_REGULAR);
     //printf("MachObj_moduleinfo(%s) seg = %d:x%x\n", scc.Sident.ptr, seg, Offset(seg));
 
     int flags = CFoff;
