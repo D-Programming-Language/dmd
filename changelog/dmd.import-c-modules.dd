@@ -1,0 +1,45 @@
+C files can now include a module statement
+
+Similar to the `__import` extension, the `__module` keyword brings D's module declaration to C.
+
+It's particularly useful when you want to import multiple C files with the same name
+(e.g. hello/utils.c and world/utils.c), since both have to be imported with `import utils` when
+they are listed on the command line, resulting in conflicts.
+
+Now you can do:
+
+hello/utils.c:
+
+```C
+
+#if __IMPORTC__
+__module hello.utils;
+#endif
+
+int sqr(int x) { return x * x; }
+```
+
+world/utils.c:
+```C
+
+#if __IMPORTC__
+__module world.utils;
+#endif
+
+int max(int a, int b) { return a > b ? a : b; }
+```
+
+app.d:
+```D
+import hello.utils;
+import world.utils;
+
+static assert(sqr(3) == 9);
+static assert(max(3, 5) == 5);
+```
+
+A __module declaration can appear anywhere in the top level scope.
+When there are multiple, the first one will be used.
+Therefore, every `#include` containing a __module declaration should come after the file's own module declaration,
+or it will be overwritten.
+When you always put the __module declaration at the very top like in D, there won't be such problems.

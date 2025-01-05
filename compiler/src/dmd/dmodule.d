@@ -806,7 +806,13 @@ extern (C++) final class Module : Package
             p.nextToken();
             checkCompiledImport();
             members = p.parseModule();
-            assert(!p.md); // C doesn't have module declarations
+            md = p.md;
+            if (md)
+            {
+                this.ident = md.id;
+                dst = Package.resolve(md.packages, &this.parent, &ppack);
+            }
+
             numlines = p.scanloc.linnum;
         }
         else
