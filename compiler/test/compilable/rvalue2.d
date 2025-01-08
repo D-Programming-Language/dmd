@@ -1,4 +1,4 @@
-/* PERMUTE_ARGS: -preview=rvaluerefparam
+/* PERMUTE_ARGS: -revert=rvaluerefparam
  */
 
 struct S
