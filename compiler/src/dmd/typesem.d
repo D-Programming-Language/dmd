@@ -2335,8 +2335,9 @@ Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
 
             // default arg must be an lvalue
             if (isRefOrOut && !isAuto &&
-                !(fparam.storageClass & STC.constscoperef) && !sc.previews.rvalueRefParam)
-                e = e.toLvalue(sc, "create default argument for `ref` / `out` parameter from");
+                !(fparam.storageClass & STC.constscoperef) &&
+                (!sc.previews.rvalueRefParam || (fparam.storageClass & STC.out_)))
+                e = e.toLvalue(sc, (global.params.rvalueRefParam != FeatureState.disabled) ? "create default argument for `out` parameter from" : "create default argument for `ref` / `out` parameter from");
 
             fparam.defaultArg = e;
             return (e.op != EXP.error);

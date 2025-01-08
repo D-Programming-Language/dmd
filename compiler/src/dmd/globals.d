@@ -190,7 +190,7 @@ extern (C++) struct Param
     bool useDIP1021;             // implement https://github.com/dlang/DIPs/blob/master/DIPs/accepted/DIP1021.md
     FeatureState fieldwise;      // do struct equality testing field-wise rather than by memcmp()
     bool fixAliasThis;           // if the current scope has an alias this, check it before searching upper scopes
-    FeatureState rvalueRefParam; // allow rvalues to be arguments to ref parameters
+    FeatureState rvalueRefParam = FeatureState.enabled; // allow rvalues to be arguments to ref parameters
                                  // https://dconf.org/2019/talks/alexandrescu.html
                                  // https://gist.github.com/andralex/e5405a5d773f07f73196c05f8339435a
                                  // https://digitalmars.com/d/archives/digitalmars/D/Binding_rvalues_to_ref_parameters_redux_325087.html

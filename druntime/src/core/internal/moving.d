@@ -40,9 +40,10 @@ void __move_post_blt(S)(ref S newLocation, ref S oldLocation) nothrow
 
     static if (__traits(hasMember, S, "opPostMove"))
     {
-        import core.internal.traits : lvalueOf, rvalueOf;
-        static assert( is(typeof(S.init.opPostMove(lvalueOf!S))) &&
-                      !is(typeof(S.init.opPostMove(rvalueOf!S))),
+        import core.internal.traits : Parameters;
+        static assert(Parameters!(S.init.opPostMove).length == 1 &&
+                      is(Parameters!(S.init.opPostMove)[0] : const S) &&
+                      __traits(getParameterStorageClasses, S.init.opPostMove, 0)[0] == "ref",
                 "`" ~ S.stringof ~ ".opPostMove` must take exactly one argument of type `" ~ S.stringof ~ "` by reference");
 
         newLocation.opPostMove(oldLocation);

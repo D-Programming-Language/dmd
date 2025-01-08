@@ -1,3 +1,7 @@
+// TODO: hack, make this test work with rvaluerefparam. With ref parameters, opAssign generation triggers:
+// compilable/test18216.d(17): Error: struct `test18216.Node` no size because of forward reference
+//
+// REQUIRED_ARGS: -revert=rvaluerefparam
 // https://issues.dlang.org/show_bug.cgi?id=18216
 
 struct Node

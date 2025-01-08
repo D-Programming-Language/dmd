@@ -1,5 +1,5 @@
 /*
-REQUIRED_ARGS: -preview=rvaluerefparam
+REQUIRED_ARGS:
 TEST_OUTPUT:
 ---
 \	S1	S2a	S2b	S3a	S3b	S4a	S4b

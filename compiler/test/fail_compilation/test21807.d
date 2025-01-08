@@ -23,33 +23,3 @@ class Foo
 		ca = getSArray();
 	}
 }
-
-/*
-TEST_OUTPUT:
----
-fail_compilation/test21807.d(117): Error: function `addr` is not callable using argument types `(int)`
-fail_compilation/test21807.d(117):        cannot pass rvalue argument `S(0).i` of type `int` to parameter `return ref int b`
-fail_compilation/test21807.d(106):        `test21807.addr(return ref int b)` declared here
----
-*/
-#line 100
-
-struct S
-{
-	int i;
-}
-
-int* addr(return ref int b)
-{
-	return &b;
-}
-
-class Foo2
-{
-	int* ptr;
-
-	this()
-	{
-		ptr = addr(S().i);  // struct temporary
-	}
-}

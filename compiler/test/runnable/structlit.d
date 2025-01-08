@@ -1,5 +1,5 @@
 /*
-REQUIRED_ARGS: -preview=rvaluerefparam
+REQUIRED_ARGS:
 RUN_OUTPUT:
 ---
 Success

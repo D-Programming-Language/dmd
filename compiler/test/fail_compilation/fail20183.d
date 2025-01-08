@@ -1,9 +1,7 @@
 /* REQUIRED_ARGS: -preview=dip1000
 TEST_OUTPUT:
 ---
-fail_compilation/fail20183.d(1016): Error: function `addr` is not callable using argument types `(int)`
-fail_compilation/fail20183.d(1016):        cannot pass rvalue argument `S(0).i` of type `int` to parameter `return ref int b`
-fail_compilation/fail20183.d(1004):        `fail20183.addr(return ref int b)` declared here
+fail_compilation/fail20183.d(1016): Error: address of variable `__rvalue2` assigned to `p` with longer lifetime
 fail_compilation/fail20183.d(1017): Error: address of expression temporary returned by `s()` assigned to `q` with longer lifetime
 fail_compilation/fail20183.d(1018): Error: address of struct literal `S(0)` assigned to `r` with longer lifetime
 ---

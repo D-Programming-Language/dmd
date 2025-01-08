@@ -248,8 +248,10 @@ template hasElaborateMove(S)
     }
     else static if (is(S == struct))
     {
-        enum hasElaborateMove = (is(typeof(S.init.opPostMove(lvalueOf!S))) &&
-                                    !is(typeof(S.init.opPostMove(rvalueOf!S)))) ||
+        enum hasElaborateMove = (is(typeof(S.init.opPostMove)) &&
+                                 Parameters!(S.init.opPostMove).length == 1 &&
+                                 is(Parameters!(S.init.opPostMove)[0] : const S) &&
+                                 __traits(getParameterStorageClasses, S.init.opPostMove, 0)[0] == "ref") ||
                                 anySatisfy!(.hasElaborateMove, Fields!S);
     }
     else

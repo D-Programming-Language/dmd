@@ -19,11 +19,7 @@ unittest
     str = "Hello again with a long long string woo";
     assert(sumOfElements_val(str) == 10935);
     assert(sumOfElements_ref(str) == 3645);
-    //assert(str == std_string("Hello again with a long long string woo")); // Needs -preview=rvaluerefparam.
-    {
-        auto tmp = std_string("Hello again with a long long string woo");   // Workaround.
-        assert(str == tmp);
-    }
+    assert(str == std_string("Hello again with a long long string woo"));
 
     std_string str2 = std_string(Default);
     assert(str2.size == 0);

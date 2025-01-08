@@ -1,5 +1,5 @@
 /*
-REQUIRED_ARGS: -preview=rvaluerefparam
+REQUIRED_ARGS:
 EXTRA_SOURCES: imports/ovs1528a.d imports/ovs1528b.d
 EXTRA_SOURCES: imports/template_ovs1.d imports/template_ovs2.d imports/template_ovs3.d
 EXTRA_FILES: imports/m8668a.d imports/m8668b.d imports/m8668c.d
