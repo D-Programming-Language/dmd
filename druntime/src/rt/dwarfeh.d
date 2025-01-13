@@ -13,7 +13,15 @@ module rt.dwarfeh;
 
 // debug = EH_personality;
 
-version (Posix):
+version (DragonFlyBSD) { version = DWARFEH; }
+else version (FreeBSD) { version = DWARFEH; }
+else version (linux) { version = DWARFEH; }
+else version (NetBSD) { version = DWARFEH; }
+else version (OpenBSD) { version = DWARFEH; }
+else version (OSX) { version = DWARFEH; }
+else version (SunOS) { version = DWARFEH; }
+
+version (DWARFEH):
 
 import rt.dmain2: _d_print_throwable;
 import core.internal.backtrace.unwind;
