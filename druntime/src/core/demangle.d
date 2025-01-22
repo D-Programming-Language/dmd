@@ -3222,3 +3222,69 @@ private struct BufSlice
     auto getSlice() inout nothrow scope { return buf[from .. to]; }
     size_t length() const scope { return to - from; }
 }
+
+
+
+/**
+ * C API to demangle D mangled names.
+ *
+ * Params:
+ *  mangled = The string to demangle.
+ *  buffer = A destination buffer.
+ *  bufferLength = The length of the destination buffer.
+ *
+ * Returns:
+ *  0 for failure or the length of the demangled string
+ *  if the buffer is too small, nothing gets written to the buffer
+ */
+extern(C) int d_demangle(const(char*) mangled, char* buffer, size_t bufferLength)
+{
+    import core.stdc.string: strlen, memcpy;
+    if (mangled == null)
+        return 0;
+
+    auto mangledSlice = mangled[0 .. strlen(mangled)];
+    auto demangled = demangle(mangledSlice);
+
+    if (demangled.ptr == null || demangled.ptr == mangled)
+        return 0;
+
+    if (demangled.length >= bufferLength)
+        return cast(int) demangled.length;
+
+    memcpy(buffer, demangled.ptr, demangled.length);
+    buffer[demangled.length] = 0;
+
+    return cast(int) demangled.length;
+}
+
+
+unittest {
+    import core.stdc.string: strncmp;
+    {
+        char[512] buffer;
+
+        int ok = d_demangle("_D6mangle2CC6memberMFNlZPi", buffer.ptr, buffer.length);
+
+        assert(ok == 1);
+        assert(strncmp(buffer.ptr, "scope int* mangle.CC.member()", buffer.length) == 0);
+    }
+
+    {
+        // test invalid mangled name
+        char[512] buffer;
+
+        int ok = d_demangle("", buffer.ptr, buffer.length);
+
+        assert(ok == 0);
+    }
+
+    {
+        // test failure for buffer too small
+        char[8] buffer;
+
+        int ok = d_demangle("_D6mangle2CC6memberMFNlZPi", buffer.ptr, buffer.length);
+
+        assert(ok == 0);
+    }
+}
