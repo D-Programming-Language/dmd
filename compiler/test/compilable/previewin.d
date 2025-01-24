@@ -72,6 +72,13 @@ LError:
     assert(0);
 }
 
+struct BigInt { size_t[4] data; }
+BigInt plusZero(in BigInt n) { return n; }
+void test23785 () @safe pure
+{
+    enum BigInt test1 = BigInt.init;
+    enum BigInt test2 = plusZero(test1);
+}
 
 // Some ABI-specific tests:
 

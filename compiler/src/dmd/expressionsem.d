@@ -3169,10 +3169,20 @@ private bool functionParameters(const ref Loc loc, Scope* sc,
             {
                 if (!arg.isLvalue())
                 {
-                    auto v = copyToTemp(STC.exptemp, "__rvalue", arg);
-                    Expression ev = new DeclarationExp(arg.loc, v);
-                    ev = new CommaExp(arg.loc, ev, new VarExp(arg.loc, v));
-                    arg = ev.expressionSemantic(sc);
+                    auto v = new VarDeclaration(
+                        arg.loc, arg.type, Identifier.generateId("__rvalue"), null);
+                    // Following `copyToTemp`
+                    v.storage_class = STC.exptemp | STC.temp | STC.ctfe;
+                    // We need to have the `VarDeclaration` in `eprefix` so that
+                    // the lifetime doesn't end at the end of the expression,
+                    // but the initialization in the function call to ensure
+                    // order of evaluation is respected.
+                    eprefix = Expression.combine(
+                        eprefix, (new DeclarationExp(arg.loc, v)).expressionSemantic(sc));
+                    arg = Expression.combine(
+                        new ConstructExp(arg.loc, new VarExp(arg.loc, v), arg).expressionSemantic(sc),
+                        new VarExp(arg.loc, v)
+                        );
                 }
                 arg = arg.toLvalue(sc, "create `in` parameter from");
 
@@ -3471,7 +3481,7 @@ private bool functionParameters(const ref Loc loc, Scope* sc,
             gate.dsymbolSemantic(sc);
 
             auto ae = new DeclarationExp(loc, gate);
-            eprefix = ae.expressionSemantic(sc);
+            eprefix = Expression.combine(eprefix, ae.expressionSemantic(sc));
         }
 
         foreach (ptrdiff_t i; 0 .. nargs)

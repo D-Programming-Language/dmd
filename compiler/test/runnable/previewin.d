@@ -4,7 +4,11 @@ void main ()
 {
     testWithAllAttributes();
     testForeach();
+    testSideEffect();
+    testSideEffect2();
 }
+
+private immutable int CTFETestSideEffect = testSideEffect2();
 
 void testWithAllAttributes() @safe pure nothrow @nogc
 {
@@ -130,6 +134,18 @@ struct NonCopyable
     @disable this(ref NonCopyable);
 }
 
+struct NonUsable
+{
+    this(string msg) { throw new Exception(msg); }
+
+    @safe pure nothrow @nogc:
+
+    this(int b) { assert(0); }
+    this(this)  { assert(0); }
+    this(ref NonUsable) { assert(0); }
+    ~this() { assert(0); }
+}
+
 struct WithPostblit
 {
     int value;
@@ -149,6 +165,47 @@ struct WithDtor
 {
     bool* value;
     ~this() scope @safe pure nothrow @nogc {  assert(*value); }
+}
+
+void testSideEffect()
+{
+    static struct Struct
+    {
+        int value;
+        // Need a dtor, but the throw is just to avoid `nothrow` inference
+        ~this() { if (value == -1) throw new Exception(""); }
+    }
+
+    static void foo (Struct a, in Struct b)
+    {
+        assert(a.value == 0);
+        assert(b.value == 1);
+    }
+
+    static Struct sideEffect ()
+    {
+        static int count;
+        return Struct(count++);
+    }
+
+    foo(sideEffect(), sideEffect());
+}
+
+int testSideEffect2()
+{
+    static void foo (in NonUsable a, in NonUsable b)
+    {
+        assert(0);
+    }
+
+    // Make sure things are not destructed if they are not constructed
+    // https://github.com/dlang/dmd/pull/14999#issuecomment-1473993053
+    try
+        foo(NonUsable("Something bad happened"), NonUsable(42));
+    catch (Exception exc)
+        assert(exc.msg == "Something bad happened");
+
+    return 0;
 }
 
 @safe pure nothrow @nogc:
