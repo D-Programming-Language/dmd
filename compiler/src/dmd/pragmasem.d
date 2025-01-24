@@ -320,6 +320,18 @@ void pragmaDeclSemantic(PragmaDeclaration pd, Scope* sc)
             .error(pd.loc, "%s `%s` takes no argument", pd.kind, pd.toPrettyChars);
         return declarations();
     }
+    else if (pd.ident == Id.compileOnImport)
+    {
+        import dmd.compiler;
+
+        if (!sc._module.isRoot())
+        {
+            sc._module.importedFrom = sc._module;
+            compiledImports.push(sc._module);
+        }
+
+        return declarations();
+    }
     else if (!global.params.ignoreUnsupportedPragmas)
     {
         error(pd.loc, "unrecognized `pragma(%s)`", pd.ident.toChars());

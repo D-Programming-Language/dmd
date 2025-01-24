@@ -1,0 +1,30 @@
+A new pragma is added that will compile a module on import.
+
+The pragma ``compileOnImport``, will convert an imported module into one that will be compiled into your binary.
+
+This is the same behavior as the ``-i`` switch, except it is a pragma in a module.
+
+A library module:
+
+```d
+module mylib;
+pragma(compileOnImport);
+
+void callMe() {
+    import std.stdio;
+    writeln("Hello!");
+}
+```
+
+The user module:
+
+```d
+module theuser;
+import mylib;
+
+void main() {
+    callMe(); // Hello!
+}
+```
+
+Compile with ``dmd -I. theuser.d``

@@ -567,20 +567,20 @@ private int tryMain(size_t argc, const(char)** argv, ref Param params)
             message("semantic3 %s", m.toChars());
         m.semantic3(null);
     }
-    if (includeImports)
+
+    // Will be empty if no module has pragma(compileOnImport) or -i is passed to compiler.
+    // Note: DO NOT USE foreach here because Module.amodules.length can
+    //       change on each iteration of the loop
+    for (size_t i = 0; i < compiledImports.length; i++)
     {
-        // Note: DO NOT USE foreach here because Module.amodules.length can
-        //       change on each iteration of the loop
-        for (size_t i = 0; i < compiledImports.length; i++)
-        {
-            auto m = compiledImports[i];
-            assert(m.isRoot);
-            if (params.v.verbose)
-                message("semantic3 %s", m.toChars());
-            m.semantic3(null);
-            modules.push(m);
-        }
+        auto m = compiledImports[i];
+        assert(m.isRoot);
+        if (params.v.verbose)
+            message("semantic3 %s", m.toChars());
+        m.semantic3(null);
+        modules.push(m);
     }
+
     Module.runDeferredSemantic3();
     if (global.errors)
         removeHdrFilesAndFail(params, modules);

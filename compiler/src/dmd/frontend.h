@@ -8583,6 +8583,7 @@ struct Id final
     static Identifier* startaddress;
     static Identifier* crt_constructor;
     static Identifier* crt_destructor;
+    static Identifier* compileOnImport;
     static Identifier* tohash;
     static Identifier* tostring;
     static Identifier* getmembers;
