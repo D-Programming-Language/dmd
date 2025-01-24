@@ -271,6 +271,26 @@ private extern(C++) final class Semantic3Visitor : Visitor
         {
             if (funcdecl.storage_class & STC.inference)
             {
+                // https://issues.dlang.org/show_bug.cgi?id=23964
+                // The attributes of the generated opAssign are deduced
+                // by merging the attributes of the opAssign,
+                // postblit and destructor of the fields of the struct.
+                // (see dmd.clone.buildOpAssign).
+                // This does not take into account if any of the fields are
+                // system variables, because system variables are discovered
+                // during semantic2. As such, before analyzing the body
+                // of the generated opAssign, we need check if `sd` contains
+                // any systems variables and, if so, update the signature to
+                // be @system.
+                if (auto ad = funcdecl.isThis())
+                {
+                    if (auto sd = ad.isStructDeclaration())
+                    {
+                        if (sd.type.hasSystemFields())
+                            (cast(TypeFunction)funcdecl.type).trust = TRUST.system;
+                    }
+                }
+
                 /* https://issues.dlang.org/show_bug.cgi?id=15044
                  * For generated opAssign function, any errors
                  * from its body need to be gagged.
