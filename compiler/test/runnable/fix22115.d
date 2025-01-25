@@ -24,7 +24,7 @@ static if (1)
         int a;
 
         void func() { }
-        final inout(AddExp) isAddExp() inout { return a == 3 ? cast(typeof(return))this : null; }
+        final inout(AddExp) isAddExp() inout { return a == 3 ? cast(typeof(return))cast(void*)this : null; }
     }
 
     extern (C++) class AddExp : Exp

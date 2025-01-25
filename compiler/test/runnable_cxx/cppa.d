@@ -1297,7 +1297,7 @@ void test15589()
     A15589 c = new B15589;
     assert(A15589.dtorSeq == null);
     assert(c.foo() == 100);
-    assert((cast(B15589)c).bar() == 200);
+    assert((cast(B15589)cast(void*)c).bar() == 200);
     c.__xdtor(); // virtual dtor call
     assert(A15589.dtorSeq[] == [ 20, 3, 10, 2, 1 ]); // destroyed full hierarchy!
 
