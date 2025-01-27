@@ -148,7 +148,17 @@ version (CRuntime_Microsoft)
 else
 {
     /// Added to Bionic since Lollipop.
+    pragma(mangle, __strtold_mangle)
     real strtold(scope inout(char)* nptr, scope inout(char)** endptr);
+
+    version (D_PPCUseIEEE128)
+    {
+        enum __strtold_mangle = "__strtoieee128";
+    }
+    else
+    {
+        enum __strtold_mangle = "strtold";
+    }
 }
 
 // No unsafe pointer manipulation.
