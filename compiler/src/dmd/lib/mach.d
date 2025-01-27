@@ -95,7 +95,7 @@ final class LibMach : Library
         void corrupt(int reason)
         {
             eSink.error(Loc.initial, "corrupt Mach object `%.*s` module %.*s %d",
-                filename.fTuple.expand, module_name.fTuple.expand, reason);
+                cast(int) filename.length, filename.ptr, cast(int) module_name.length, module_name.ptr, reason);
         }
 
         int fromfile = 0;

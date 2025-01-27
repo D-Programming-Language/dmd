@@ -17,7 +17,6 @@ import core.checkedint;
 
 import dmd.errorsink;
 import dmd.location;
-import dmd.root.string : fTuple;
 
 nothrow:
 
@@ -44,7 +43,7 @@ void scanElfObjModule(void delegate(const(char)[] name, int pickAny) nothrow pAd
 
     void corrupt(int reason)
     {
-        eSink.error(Loc.initial, "corrupt ELF object `%.*s` module `%s` %d", filename.fTuple.expand, module_name, reason);
+        eSink.error(Loc.initial, "corrupt ELF object `%.*s` module `%s` %d", cast(int) filename.length, filename.ptr, module_name, reason);
     }
 
     if (base.length < Elf32_Ehdr.sizeof)

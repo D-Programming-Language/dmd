@@ -18,7 +18,6 @@ import dmd.errorsink;
 import dmd.location;
 //import core.sys.darwin.mach.loader;
 import dmd.backend.mach;
-import dmd.root.string : fTuple;
 
 nothrow:
 
@@ -45,7 +44,7 @@ void scanMachObjModule(void delegate(const(char)[] name, int pickAny) nothrow pA
 
     void corrupt(int reason)
     {
-        eSink.error(Loc.initial, "corrupt Mach-O object `%.*s` module `%s` %d", filename.fTuple.expand, module_name, reason);
+        eSink.error(Loc.initial, "corrupt Mach-O object `%.*s` module `%s` %d", cast(int) filename.length, filename.ptr, module_name, reason);
     }
 
     const buf = base.ptr;
