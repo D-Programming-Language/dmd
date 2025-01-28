@@ -430,7 +430,7 @@ public:
     {
         //printf("NewExp.inlineCost3() %s\n", e.toChars());
         AggregateDeclaration ad = isAggregate(e.newtype);
-        if (ad && ad.isNested())
+        if (ad && ad.isNested() || e.placement)
             cost = COST_MAX;
         else
             cost++;

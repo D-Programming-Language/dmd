@@ -9482,7 +9482,17 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
     {
         const loc = token.loc;
 
-        nextToken();
+        nextToken();     // skip past `new`
+
+        // parse PlacementExpression if any
+        AST.Expression placement;
+        if (token.value == TOK.leftParenthesis)
+        {
+            nextToken();
+            placement = parseAssignExp();
+            check(TOK.rightParenthesis);
+        }
+
         AST.Expressions* arguments = null;
         AST.Identifiers* names = null;
 
@@ -9518,7 +9528,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             }
 
             auto cd = new AST.ClassDeclaration(loc, id, baseclasses, members, false);
-            auto e = new AST.NewAnonClassExp(loc, thisexp, cd, arguments);
+            auto e = new AST.NewAnonClassExp(loc, placement, thisexp, cd, arguments);
             return e;
         }
 
@@ -9542,7 +9552,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             parseNamedArguments(arguments, names);
         }
 
-        auto e = new AST.NewExp(loc, thisexp, t, arguments, names);
+        auto e = new AST.NewExp(loc, placement, thisexp, t, arguments, names);
         return e;
     }
 

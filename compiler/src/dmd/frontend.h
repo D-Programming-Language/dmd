@@ -3238,6 +3238,7 @@ public:
     Expression* thisexp;
     ClassDeclaration* cd;
     Array<Expression* >* arguments;
+    Expression* placement;
     NewAnonClassExp* syntaxCopy() override;
     void accept(Visitor* v) override;
 };
@@ -3249,12 +3250,13 @@ public:
     Type* newtype;
     Array<Expression* >* arguments;
     Array<Identifier* >* names;
+    Expression* placement;
     Expression* argprefix;
     CtorDeclaration* member;
     bool onstack;
     bool thrownew;
     Expression* lowering;
-    static NewExp* create(const Loc& loc, Expression* thisexp, Type* newtype, Array<Expression* >* arguments);
+    static NewExp* create(const Loc& loc, Expression* placement, Expression* thisexp, Type* newtype, Array<Expression* >* arguments);
     NewExp* syntaxCopy() override;
     void accept(Visitor* v) override;
 };

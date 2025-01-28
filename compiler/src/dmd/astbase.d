@@ -4814,10 +4814,12 @@ struct ASTBase
         Expression thisexp;     // if !=null, 'this' for class being allocated
         ClassDeclaration cd;    // class being instantiated
         Expressions* arguments; // Array of Expression's to call class constructor
+        Expression placement;   // if != null, then PlacementExpression
 
-        extern (D) this(const ref Loc loc, Expression thisexp, ClassDeclaration cd, Expressions* arguments)
+        extern (D) this(const ref Loc loc, Expression placement, Expression thisexp, ClassDeclaration cd, Expressions* arguments)
         {
             super(loc, EXP.newAnonymousClass, __traits(classInstanceSize, NewAnonClassExp));
+            this.placement = placement;
             this.thisexp = thisexp;
             this.cd = cd;
             this.arguments = arguments;
@@ -5026,10 +5028,12 @@ struct ASTBase
         Type newtype;
         Expressions* arguments;     // Array of Expression's
         Identifiers* names;         // Array of names corresponding to expressions
+        Expression placement;       // if != null, then PlacementExpression
 
-        extern (D) this(const ref Loc loc, Expression thisexp, Type newtype, Expressions* arguments, Identifiers* names = null)
+        extern (D) this(const ref Loc loc, Expression placement, Expression thisexp, Type newtype, Expressions* arguments, Identifiers* names = null)
         {
             super(loc, EXP.new_, __traits(classInstanceSize, NewExp));
+            this.placement = placement;
             this.thisexp = thisexp;
             this.newtype = newtype;
             this.arguments = arguments;

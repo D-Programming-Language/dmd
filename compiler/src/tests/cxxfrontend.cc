@@ -1351,7 +1351,7 @@ public:
         (void)d->csym;
         (void)d->vtblSymbol()->csym;
         (void)d->sinit;
-        NewExp *ne = NewExp::create(d->loc, NULL, d->type, NULL);
+        NewExp *ne = NewExp::create(d->loc, NULL, NULL, d->type, NULL);
         ne->type = d->type;
         Expression *e = dmd::ctfeInterpret(ne);
         assert(e->op == EXP::classReference);
