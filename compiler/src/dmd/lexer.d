@@ -312,6 +312,15 @@ class Lexer
         return peek(t).value;
     }
 
+    /***********************
+     * Look 3 tokens ahead at value.
+     */
+    final TOK peekNext3()
+    {
+        Token* t = peek(peek(&token));
+        return peek(t).value;
+    }
+
     /****************************
      * Turn next token in buffer into a token.
      * Params:

@@ -3871,8 +3871,18 @@ private void visitFuncIdentWithPostfix(TypeFunction t, const char[] ident, ref O
         return;
     }
     t.inuse++;
+    bool parenWritten = false;
+    void openParenthesis()
+    {
+        if (!parenWritten)
+        {
+            buf.writeByte('(');
+            parenWritten = true;
+        }
+    }
     if (t.linkage > LINK.d && hgs.ddoc != 1 && !hgs.hdrgen)
     {
+        openParenthesis();
         linkageToBuffer(buf, t.linkage);
         buf.writeByte(' ');
     }
@@ -3880,12 +3890,37 @@ private void visitFuncIdentWithPostfix(TypeFunction t, const char[] ident, ref O
         buf.write("static ");
     if (t.next)
     {
+        if (t.isRef)
+        {
+            openParenthesis();
+            buf.write("ref ");
+        }
+        immutable bool hasNestedNonParendCallable = {
+            for ({ Type tt = t; TypeNext tn = null; } (tn = tt.isTypeNext) !is null;)
+            {
+                tt = tn.next;
+                switch (tt.ty)
+                {
+                    case Tsarray, Tarray, Taarray, Tpointer, Treference, Tdelegate, Tslice: continue;
+                    case Tfunction:
+                        TypeFunction tf = cast(TypeFunction) tt;
+                        return !tf.isRef && tf.linkage <= LINK.d;
+                    default: return false;
+                }
+            }
+            return false;
+        }();
+        if (hasNestedNonParendCallable) buf.writeByte('(');
         typeToBuffer(t.next, null, buf, hgs);
+        if (hasNestedNonParendCallable) buf.writeByte(')');
         if (ident)
             buf.writeByte(' ');
     }
     else if (hgs.ddoc)
+    {
+        openParenthesis();
         buf.writestring("auto ");
+    }
     if (ident)
         buf.writestring(ident);
     parametersToBuffer(t.parameterList, buf, hgs);
@@ -3897,13 +3932,15 @@ private void visitFuncIdentWithPostfix(TypeFunction t, const char[] ident, ref O
         MODtoBuffer(buf, t.mod);
     }
 
-    void dg(string str)
+    void writeAttribute(string str)
     {
+        if (str == "ref") return; // 'ref' is handled above
         buf.writeByte(' ');
         buf.writestring(str);
     }
-    t.attributesApply(&dg);
-
+    t.attributesApply(&writeAttribute);
+    if (parenWritten)
+        buf.writeByte(')');
     t.inuse--;
 }
 

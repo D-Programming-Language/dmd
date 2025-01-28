@@ -430,6 +430,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             case TOK.class_:
             case TOK.interface_:
             case TOK.traits:
+            case TOK.leftParenthesis:
             Ldeclaration:
                 a = parseDeclarations(false, pAttrs, pAttrs.comment);
                 if (a && a.length)
@@ -3460,6 +3461,21 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         return decldefs;
     }
 
+    /**
+     * Encapsulates linkage and ref-return information
+     * when parsing a function pointer or delegate type.
+     * The `link2` member is used for better error handling.
+     */
+    private static struct CallableIntroducer
+    {
+        LINK link;
+        LINK link2;
+        bool isRef;
+        bool isRef2;
+
+        bool linkageSpecified() const { return (link | link2) != LINK.default_; }
+    }
+
     /* Parse a type and optional identifier
      * Params:
      *  pident       = set to Identifier if there is one, null if not
@@ -3468,55 +3484,49 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
      */
     AST.Type parseType(Identifier* pident = null, AST.TemplateParameters** ptpl = null, Loc* pdeclLoc = null)
     {
-        /* Take care of the storage class prefixes that
-         * serve as type attributes:
-         *               const type
-         *           immutable type
-         *              shared type
-         *               inout type
-         *         inout const type
-         *        shared const type
-         *        shared inout type
-         *  shared inout const type
-         */
-        StorageClass stc = 0;
-        while (1)
-        {
-            switch (token.value)
+        //printf("parseType()\n");
+        immutable stc = parseTypeCtor();
+
+        // Parse up to two sets of Linkage and `ref` for better error messages in parseTypeSuffixes
+        // when parentheses are omitted.
+        immutable CallableIntroducer intro = {
+            CallableIntroducer result;
+
+            // Handle linkage for function pointer and delegate types
+            LINK getLinkage()
             {
-            case TOK.const_:
-                if (peekNext() == TOK.leftParenthesis)
-                    break; // const as type constructor
-                stc |= STC.const_; // const as storage class
-                nextToken();
-                continue;
+                if (token.value != TOK.extern_) return LINK.default_;
 
-            case TOK.immutable_:
-                if (peekNext() == TOK.leftParenthesis)
-                    break;
-                stc |= STC.immutable_;
-                nextToken();
-                continue;
-
-            case TOK.shared_:
-                if (peekNext() == TOK.leftParenthesis)
-                    break;
-                stc |= STC.shared_;
-                nextToken();
-                continue;
-
-            case TOK.inout_:
-                if (peekNext() == TOK.leftParenthesis)
-                    break;
-                stc |= STC.wild;
-                nextToken();
-                continue;
-
-            default:
-                break;
+                auto l = parseLinkage();
+                // Reject C++-class-specific stuff
+                if (l.cppmangle != CPPMANGLE.def)
+                    error("C++ mangle declaration not allowed here");
+                if (l.idents != null || l.identExps != null)
+                    error("C++ namespaces not allowed here");
+                return l.link;
+                // printf("Linkage seen: %d\n", link);
             }
-            break;
-        }
+            result.link = getLinkage();
+
+            // Handle `ref` TypeCtors(opt) BasicType TypeSuffixes(opt) CallableSuffix NonCallableSuffixes(opt)
+            result.isRef = token.value == TOK.ref_;
+            if (result.isRef)
+            {
+                nextToken();
+            }
+
+            result.link2 = getLinkage();
+
+            result.isRef2 = token.value == TOK.ref_;
+            if (result.isRef2)
+            {
+                nextToken();
+            }
+
+            return result;
+        }();
+
+        immutable stc2 = parseTypeCtor();
 
         const typeLoc = token.loc;
 
@@ -3526,7 +3536,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         if (pdeclLoc)
             *pdeclLoc = token.loc;
         int alt = 0;
-        t = parseDeclarator(t, alt, pident, ptpl);
+        t = parseDeclarator(t, alt, pident, ptpl, stc2, null, null, intro);
         checkCstyleTypeSyntax(typeLoc, t, alt, pident ? *pident : null);
 
         t = t.addSTC(stc);
@@ -3736,6 +3746,13 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             check(TOK.rightParenthesis);
             break;
 
+        case TOK.leftParenthesis:
+            // (type)
+            nextToken();
+            t = parseType();
+            check(TOK.rightParenthesis);
+            break;
+
         default:
             error("basic type expected, not `%s`", token.toChars());
             if (token.value == TOK.else_)
@@ -3896,9 +3913,13 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
      * See_Also:
      *      https://dlang.org/spec/declaration.html#TypeSuffixes
      */
-    private AST.Type parseTypeSuffixes(AST.Type t)
+    private AST.Type parseTypeSuffixes(AST.Type t, immutable StorageClass stc2 = 0, immutable CallableIntroducer intro = CallableIntroducer())
     {
         //printf("parseTypeSuffixes()\n");
+        immutable requireCallable = intro.isRef || intro.linkageSpecified;
+        bool ambiguous = false; // will be true if `requireCallable` and there is more than one callable suffix
+        AST.TypeFunction tf = null; // The function type underlying the last function pointer or delegate suffix
+        AST.TypeNext tn = null; // last function pointer or delegate suffix
         while (1)
         {
             switch (token.value)
@@ -3955,28 +3976,178 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             case TOK.delegate_:
             case TOK.function_:
                 {
-                    // Handle delegate declaration:
-                    //      t delegate(parameter list) nothrow pure
-                    //      t function(parameter list) nothrow pure
-                    const save = token.value;
+                    // Handle latter part of delegate declaration:
+                    //      Linkage(opt) ref(opt) type delegate(parameter list) nothrow pure
+                    //      Linkage(opt) ref(opt) type function(parameter list) nothrow pure
+                    immutable callableKeyword = token.value;
                     nextToken();
 
                     auto parameterList = parseParameterList(null);
 
-                    StorageClass stc = parsePostfix(STC.undefined_, null);
-                    auto tf = new AST.TypeFunction(parameterList, t, linkage, stc);
+                    immutable StorageClass stc = parsePostfix(STC.undefined_, null);
+                    ambiguous = requireCallable && tf !is null;
+                    tf = new AST.TypeFunction(parameterList, t, linkage, stc);
                     if (stc & (STC.const_ | STC.immutable_ | STC.shared_ | STC.wild | STC.return_))
                     {
-                        if (save == TOK.function_)
+                        if (callableKeyword == TOK.function_)
                             error("`const`/`immutable`/`shared`/`inout`/`return` attributes are only valid for non-static member functions");
                         else
                             tf = cast(AST.TypeFunction)tf.addSTC(stc);
                     }
-                    t = save == TOK.delegate_ ? new AST.TypeDelegate(tf) : new AST.TypePointer(tf); // pointer to function
+                    t = tn = callableKeyword == TOK.delegate_
+                        ? new AST.TypeDelegate(tf)
+                        : new AST.TypePointer(tf); // pointer to function
+                    if (ambiguous)
+                    {
+                        static AST.TypeNext applyToNextInnerFunction(AST.Type t, bool isRef, LINK link = LINK.default_)
+                        {
+                            auto tt = (cast(AST.TypeNext) t).syntaxCopy;
+                            for (
+                                {AST.Type tnextt = (cast(AST.TypeFunction)tt.next).next; AST.TypeNext tnextn; }
+                                (tnextn = tnextt.isTypeNext) !is null;
+                                tnextt = tnextn.next
+                            )
+                            {
+                                if (tnextn.ty == Tfunction)
+                                {
+                                    auto tfn = cast(AST.TypeFunction)tnextn;
+                                    tfn.isRef = isRef;
+                                    tfn.linkage = link;
+                                    return tt;
+                                }
+                            }
+                            assert(0);
+                        }
+
+                        // The negations of these should be logically impossible:
+                        assert(intro.link || intro.isRef || !intro.link2); // second linkage with no first linkage and first ref
+                        assert(intro.isRef || intro.link2 || !intro.isRef2); // second ref with no first ref and second linkage
+
+                        if (intro.link && intro.link2 || intro.isRef && intro.isRef2 || intro.isRef && intro.link2)
+                        {
+                            // If there are two linkages or two `ref` (or both) or `ref` and linkage after, presume user intent is clear,
+                            // the user just forgot to use parentheses.
+                            // Examples:
+                            // - `extern(C) extern(C) int function() function()`
+                            // - `ref ref int function() function()`
+                            // - `ref extern(C) int function() function()`
+                            // Notably absent: `extern(C) ref int function() function()` -- This falls into a different category
+                            if (intro.link && intro.link2)        error("Second linkage requires explicit parentheses.");
+                            else if (intro.isRef && intro.isRef2) error("Second `ref` requires explicit parentheses.");
+                            else                                  error("Linkage after `ref` requires explicit parentheses.");
+                            if (intro.link != LINK.default_)
+                                eSink.errorSupplemental(token.loc, "Use `extern(%s)%s %s`", AST.linkageToChars(intro.link), (intro.isRef ? " ref" : "").ptr, applyToNextInnerFunction(t, intro.isRef2, intro.link2).toChars());
+                            else
+                                eSink.errorSupplemental(token.loc, "Use `%s%s`", (intro.isRef ? "ref " : "").ptr, applyToNextInnerFunction(t, intro.isRef2, intro.link2).toChars());
+                        }
+                        else if (intro.link)
+                        {
+                            // Examples:
+                            // - `extern(C) ref int function() function()`
+                            // - `extern(C) int function() function()`
+                            error("Linkage%s could refer to more than one `function` or `delegate` here.", (intro.isRef ? " and `ref`" : "").ptr);
+                            eSink.errorSupplemental(token.loc, "Suggested clarifying parentheses:");
+                            eSink.errorSupplemental(token.loc, "   `extern(%s)%s %s` (possibly in parentheses)", AST.linkageToChars(intro.link), (intro.isRef ? " ref" : "").ptr, t.toChars());
+                            if (intro.isRef)
+                            {
+                                eSink.errorSupplemental(token.loc, "or `extern(%s) %s`", AST.linkageToChars(intro.link), applyToNextInnerFunction(t, true).toChars());
+                            }
+                            eSink.errorSupplemental(token.loc, "or `%s`", applyToNextInnerFunction(t, intro.isRef, intro.link).toChars());
+                        }
+                        else
+                        {
+                            // Example:
+                            // - `ref int function() function()`
+                            assert(intro.isRef);
+                            error("`ref` could refer to more than one `function` or `delegate` here.");
+                            eSink.errorSupplemental(token.loc, "Suggested clarifying parentheses:");
+                            eSink.errorSupplemental(token.loc, "   `ref %s` (possibly in parentheses)", t.toChars());
+                            eSink.errorSupplemental(token.loc, "or `%s`", applyToNextInnerFunction(t, true).toChars());
+                        }
+                    }
                     continue;
                 }
             default:
-                return t;
+                {
+                    if (requireCallable && !ambiguous)
+                    {
+                        if (tf is null)
+                        {
+                            if (intro.linkageSpecified && intro.isRef) error("Linkage and `ref` are only valid for `function` and `delegate` types");
+                            else if (intro.isRef)
+                            {
+                                error("`ref` is not a type qualifier.");
+                                eSink.errorSupplemental(token.loc, "It is only valid in this context to form a function pointer or delegate type,");
+                                eSink.errorSupplemental(token.loc, "but no `function(...)` or `delegate(...)` suffix was found.");
+                            }
+                            else error("Linkage is only valid for `function` and `delegate` types");
+                        }
+
+                        // Handle errors.
+                        // The negations of these should be logically impossible:
+                        assert(intro.link || intro.isRef || !intro.link2); // second linkage with no first linkage and first ref
+                        assert(intro.isRef || intro.link2 || !intro.isRef2); // second ref with no first ref and second linkage
+                        if (!intro.link && intro.isRef && intro.link2 && !intro.isRef2)
+                        {
+                            // Assume the user accidentally flipped `ref` and linkage
+                            // Example: `ref extern(C) int function()`
+                            error("Linkage must come before `ref`.");
+                            eSink.errorSupplemental(token.loc, "Use `extern(%s) ref %s`", AST.linkageToChars(intro.link2), t.toChars());
+                        }
+                        else if (intro.link2 || intro.isRef2)
+                        {
+                            // Examples:
+                            // - `ref ref int function()`
+                            // - `ref extern(C) int function()`
+                            // - `ref extern(C) ref int function()`
+                            // - `extern(C) extern(C) int function()`
+                            // - `extern(C) extern(C) ref int function()`
+                            // - `extern(C) ref ref int function()`
+                            // - `extern(C) ref extern(C) int function()`
+                            // - `extern(C) ref extern(C) ref int function()`
+                            assert(intro.link || intro.isRef);
+                            immutable dupLink = intro.link  && intro.link2;
+                            immutable dupRef  = intro.isRef && intro.isRef2;
+                            error("Duplicate %s%s%s", (dupLink ? "linkage" : "").ptr, (dupLink && dupRef ? " and " : "").ptr, (dupRef ? "`ref`" : "").ptr);
+                            eSink.errorSupplemental(token.loc, "If a second `function(...)` or `delegate(...)` is missing,",);
+                            eSink.errorSupplemental(token.loc, "parentheses around the inner function pointer or delegate type are needed.",);
+                        }
+
+                        tf.next = tf.next.addSTC(stc2);
+                        tf.isRef = intro.isRef || intro.isRef2;
+                        if (intro.linkageSpecified)
+                        {
+                            tf.linkage = intro.link ? intro.link : intro.link2;
+                            // NOTE: The above should work, but does not.
+                            // Everything that follows is a workaround.
+
+                            // Idea: Replace tn by
+                            //      typeof(function{ extern(<link>) <tn> __result; return __result; }())
+
+                            auto resultId = new Identifier("__result");
+                            auto fd = new AST.FuncLiteralDeclaration(token.loc, Loc.initial, new AST.TypeFunction(AST.ParameterList(), null, LINK.default_), TOK.function_, null);
+                            auto vardecl = new AST.Dsymbols();
+                            vardecl.push(new AST.VarDeclaration(token.loc, tn, resultId, null));
+                            fd.fbody = new AST.CompoundStatement(token.loc,
+                                new AST.ExpStatement(token.loc, new AST.DeclarationExp(token.loc, new AST.LinkDeclaration(token.loc, tf.linkage, vardecl))),
+                                new AST.ReturnStatement(token.loc, new AST.IdentifierExp(token.loc, resultId))
+                            );
+                            auto typeoftype = new AST.TypeTypeof(token.loc, new AST.CallExp(token.loc, new AST.FuncExp(token.loc, fd)));
+
+                            if (t is tn) return typeoftype;
+
+                            AST.TypeNext tx = t.isTypeNext();
+                            assert(tx !is null);
+                            while (tx.next !is tn)
+                            {
+                                tx = tx.next.isTypeNext();
+                                assert(tx !is null);
+                            }
+                            tx.next = typeoftype;
+                        }
+                    }
+                    return t;
+                }
             }
             assert(0);
         }
@@ -4000,10 +4171,10 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
      */
     private AST.Type parseDeclarator(AST.Type t, ref int palt, Identifier* pident,
         AST.TemplateParameters** tpl = null, StorageClass storageClass = 0,
-        bool* pdisable = null, AST.Expressions** pudas = null)
+        bool* pdisable = null, AST.Expressions** pudas = null, CallableIntroducer intro = CallableIntroducer())
     {
         //printf("parseDeclarator(tpl = %p)\n", tpl);
-        t = parseTypeSuffixes(t);
+        t = parseTypeSuffixes(t, storageClass, intro);
         AST.Type ts;
         switch (token.value)
         {
@@ -4297,7 +4468,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                     link = res.link;
                     if (res.idents || res.identExps)
                     {
-                        error("C++ name spaces not allowed here");
+                        error("C++ namespaces not allowed here");
                     }
                     if (res.cppmangle != CPPMANGLE.def)
                     {
@@ -4901,7 +5072,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                             error("cannot put a storage-class in an `alias` declaration.");
                         // parseAttributes shouldn't have set these variables
                         assert(link == linkage && !setAlignment && ealign is null);
-                        auto tpl_ = cast(AST.TemplateDeclaration) s;
+                        auto tpl_ = s.isTemplateDeclaration;
                         if (tpl_ is null || tpl_.members.length != 1)
                         {
                             error("user-defined attributes are not allowed on `alias` declarations");
@@ -4917,6 +5088,14 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                     }
 
                     v = new AST.AliasDeclaration(loc, ident, s);
+
+                    if (auto tpl_ = s.isTemplateDeclaration)
+                    {
+                        assert(tpl_.members.length == 1);
+                        auto fd = cast(AST.FuncLiteralDeclaration) (*tpl_.members)[0];
+                        auto tf = cast(AST.TypeFunction) fd.type;
+                        link = tf.linkage;
+                    }
                 }
                 else
                 {
@@ -4990,6 +5169,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                     auto a2 = new AST.Dsymbols();
                     a2.push(s);
                     s = new AST.LinkDeclaration(linkloc, link, a2);
+                    // printf("Uses LinkDeclaration: linkage = %d\n", link);
                 }
                 a.push(s);
 
@@ -5035,6 +5215,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         AST.TemplateParameters* tpl = null;
         AST.ParameterList parameterList;
         AST.Type tret = null;
+        LINK linkage = LINK.default_;
         StorageClass stc = 0;
         TOK save = TOK.reserved;
 
@@ -5044,6 +5225,16 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         case TOK.delegate_:
             save = token.value;
             nextToken();
+            if (token.value == TOK.extern_)
+            {
+                ParsedLinkage!(AST) pl = parseLinkage();
+                // Reject C++-class-specific stuff
+                if (pl.cppmangle != CPPMANGLE.def)
+                    error("C++ mangle declaration not allowed here");
+                if (pl.idents != null || pl.identExps != null)
+                    error("C++ namespaces not allowed here");
+                linkage = pl.link;
+            }
             if (token.value == TOK.auto_)
             {
                 nextToken();
@@ -5064,8 +5255,19 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 stc = STC.ref_;
                 nextToken();
             }
-            if (token.value != TOK.leftParenthesis && token.value != TOK.leftCurly &&
-                token.value != TOK.goesTo)
+            if (token.value != TOK.leftParenthesis && token.value != TOK.leftCurly && token.value != TOK.goesTo
+            ||  token.value == TOK.leftParenthesis && {
+                size_t nesting = 1;
+                auto t = &token;
+                do
+                {
+                    t = peek(t);
+                    nesting += (t.value == TOK.leftParenthesis) - (t.value == TOK.rightParenthesis);
+                }
+                while (nesting > 0 || t.value != TOK.rightParenthesis);
+                return peek(t).value == TOK.leftParenthesis;
+            }()
+            )
             {
                 // function type (parameters) { statements... }
                 // delegate type (parameters) { statements... }
@@ -5152,6 +5354,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
 
         auto tf = new AST.TypeFunction(parameterList, tret, linkage, stc);
         tf = cast(AST.TypeFunction)tf.addSTC(stc);
+        tf.linkage = linkage;
         auto fd = new AST.FuncLiteralDeclaration(loc, Loc.initial, tf, save, null, null, stc & STC.auto_);
 
         if (token.value == TOK.goesTo)
@@ -5642,7 +5845,6 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         {
             switch (token.value)
             {
-            // parse ref for better error
             case TOK.ref_:
                 stc = STC.ref_;
                 break;
@@ -5695,8 +5897,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             storageClass = appendStorageClass(storageClass, stc);
             nextToken();
         }
-        auto n = peek(&token);
-        if (storageClass != 0 && token.value == TOK.identifier && n.value == TOK.assign)
+        if (storageClass != 0 && token.value == TOK.identifier && peek(&token).value == TOK.assign)
         {
             Identifier ai = token.ident;
             AST.Type at = null; // infer parameter type
@@ -5705,7 +5906,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             check(TOK.assign);
             param = new AST.Parameter(aloc, storageClass, at, ai, null, null);
         }
-        else if (isDeclaration(&token, NeedDeclaratorId.must, TOK.assign, null))
+        else if (token.value == TOK.extern_ || isDeclaration(&token, NeedDeclaratorId.must, TOK.assign, null))
         {
             Identifier ai;
             const aloc = token.loc;
@@ -5714,9 +5915,50 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             param = new AST.Parameter(aloc, storageClass, at, ai, null, null);
         }
         else if (storageClass != 0)
-            error("found `%s` while expecting `=` or identifier", n.toChars());
+            error("found `%s` while expecting `=` or identifier", peek(&token).toChars());
 
         return param;
+    }
+
+    /++
+     + Returns whether `t` probably points to the start of a lambda expression.
+     +/
+    private bool isLikelyLambdaExpressionStart(Token* t)
+    {
+        // With `function` or `delegate`, we assume the case is clear.
+        if (t.value == TOK.function_ || t.value == TOK.delegate_)
+            return true;
+
+        // Same with `{}` or `identifier =>`
+        if (t.value == TOK.leftCurly || t.value == TOK.identifier && peek(t).value == TOK.goesTo)
+            return true;
+
+        // The hard part: `auto`/`auto ref` Parameters MemberFunctionAttributes? FunctionLiteralBody
+        if (t.value == TOK.auto_) t = peek(t);
+        if (t.value == TOK.ref_)  t = peek(t);
+
+        if (t.value != TOK.leftParenthesis)
+            return false;
+        // Parameter list: Just assume it’s fine.
+        size_t nesting = 1;
+        do
+        {
+            t = peek(t);
+            nesting += (t.value == TOK.leftParenthesis) - (t.value == TOK.rightParenthesis);
+        }
+        while (nesting > 0 || t.value != TOK.rightParenthesis);
+        // MemberFunctionAttributes:
+        do
+            t = peek(t);
+        while (
+            // Proper member function attributes:
+            t.value == TOK.const_ || t.value == TOK.immutable_ || t.value == TOK.inout_ ||
+            t.value == TOK.return_ || t.value == TOK.scope_ || t.value == TOK.shared_ ||
+            // Function attributes:
+            t.value == TOK.nothrow_ || t.value == TOK.pure_ ||
+            (t.value == TOK.at && (t = peek(t)).value == TOK.identifier)
+        );
+        return t.value == TOK.goesTo || t.value == TOK.leftCurly;
     }
 
     /*****************************************
@@ -5809,7 +6051,6 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         case TOK.string_:
         case TOK.interpolated:
         case TOK.hexadecimalString:
-        case TOK.leftParenthesis:
         case TOK.cast_:
         case TOK.mul:
         case TOK.min:
@@ -5944,15 +6185,14 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 goto Lexp;
             if (peekNext() == TOK.leftParenthesis)
                 goto Lexp;
-            goto case;
+            goto Ldeclaration;
 
         // FunctionLiteral `auto ref (`
+        // FunctionLiteral: `ref (`
+        // Reference variable: `ref BasicType`; BasicType can start with `(`.
         case TOK.auto_:
-            if (peekNext() == TOK.ref_ && peekNext2() == TOK.leftParenthesis)
-                goto Lexp;
-            goto Ldeclaration;
         case TOK.ref_:
-            if (peekNext() == TOK.leftParenthesis)
+            if (isLikelyLambdaExpressionStart(&token))
                 goto Lexp;
             goto Ldeclaration;
 
@@ -6022,6 +6262,12 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 if (flags & ParseStatementFlags.scope_)
                     s = new AST.ScopeStatement(loc, s, token.loc);
                 break;
+            }
+        case TOK.leftParenthesis:
+            {
+                if (isDeclaration(&token, NeedDeclaratorId.mustIfDstyle, TOK.reserved, null))
+                    goto Ldeclaration;
+                goto Lexp;
             }
         case TOK.mixin_:
             {
@@ -6222,13 +6468,50 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             goto Lerror;
 
         case TOK.scope_:
+            // The `scope` keyword can introduce:
+            // 1. a scope guard via:
+            //      1.1 Simple scope guard `scope (token) NonEmptyOrScopeBlockStatement`
+            //      1.2 Elaborate scope guard `scope (token tokens..) ScopeBlockStatement`
+            // 2. a `scope` variable via:
+            //    `scope (token tokens..)` followed by something other than a `ScopeBlockStatement`
             if (peekNext() != TOK.leftParenthesis)
+            {
                 goto Ldeclaration; // scope used as storage class
+            }
+
+            {
+                Token* tokenAfterClosingParen = peek(peek(&token));
+                size_t argumentLength = 0;
+                tokenAfterClosingParen = peek(tokenAfterClosingParen);
+                for (size_t level = 1; level != 0; ++argumentLength)
+                {
+                    level += tokenAfterClosingParen.value == TOK.leftParenthesis;
+                    level -= tokenAfterClosingParen.value == TOK.rightParenthesis;
+                    tokenAfterClosingParen = peek(tokenAfterClosingParen);
+                    if (tokenAfterClosingParen.value == TOK.endOfFile)
+                    {
+                        error("unmatched parenthesis");
+                        goto Lerror;
+                    }
+                }
+
+                if (argumentLength == 0)
+                {
+                    error("expected type or scope guard after `scope`, not empty parentheses");
+                    goto Lerror;
+                }
+
+                if (argumentLength > 1 && tokenAfterClosingParen.value != TOK.leftCurly)
+                {
+                    goto Ldeclaration; // scope used as storage class
+                }
+            }
+            // Handle the scope guard
             nextToken();
-            check(TOK.leftParenthesis);
+            nextToken();
             if (token.value != TOK.identifier)
             {
-                error("scope identifier expected");
+                error("unsupported scope guard");
                 goto Lerror;
             }
             else
@@ -6242,7 +6525,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 else if (id == Id.success)
                     t = TOK.onScopeSuccess;
                 else
-                    error("valid scope identifiers are `exit`, `failure`, or `success`, not `%s`", id.toChars());
+                    error("supported scope identifiers are `exit`, `failure`, or `success`, not `%s`", id.toChars());
                 nextToken();
                 check(TOK.rightParenthesis);
                 AST.Statement st = parseStatement(ParseStatementFlags.scope_);
@@ -7150,6 +7433,23 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         mustIfDstyle,   // Declarator part must have identifier, but don't recognize old C-style syntax
     }
 
+    /++
+     + Returns whether the token starts `scope(exit)`, `scope(failure)`, or `scope(success)`.
+     +/
+    private bool isScopeGuard(Token* t)
+    {
+        if (t.value != TOK.scope_) return false;
+        t = peek(t);
+        if (t.value != TOK.leftParenthesis) return false;
+        t = peek(t);
+        if (t.value != TOK.identifier) return false;
+        if (t.ident != Id.exit && t.ident != Id.failure && t.ident != Id.success)
+            return false;
+        t = peek(t);
+        if (t.value != TOK.rightParenthesis) return false;
+        return true;
+    }
+
     /************************************
      * Determine if the scanner is sitting on the start of a declaration.
      * Params:
@@ -7162,45 +7462,57 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
      */
     private bool isDeclaration(Token* t, NeedDeclaratorId needId, TOK endtok, Token** pt)
     {
-        //printf("isDeclaration(needId = %d)\n", needId);
-        int haveId = 0;
-        int haveTpl = 0;
+        // printf("isDeclaration(needId: %d) %s\n", needId, t.toChars());
 
-        while (1)
+        // `scope` can be a storage class, but a scope guard takes priority
+        if (isScopeGuard(t)) return false;
+
+        bool skipStroageClassTypeCtor()
         {
-            if ((t.value == TOK.const_ || t.value == TOK.immutable_ || t.value == TOK.inout_ || t.value == TOK.shared_) && peek(t).value != TOK.leftParenthesis)
+            bool isTypeCtor() { return t.value == TOK.const_ || t.value == TOK.immutable_ || t.value == TOK.inout_ || t.value == TOK.shared_; }
+            bool isFreestandingTypeCtor() { return isTypeCtor() && peek(t).value != TOK.leftParenthesis; }
+            bool storageClassSeen = false;
+            while (isFreestandingTypeCtor() || t.value == TOK.ref_ || t.value == TOK.auto_ || t.value == TOK.scope_)
             {
-                /* const type
-                 * immutable type
-                 * shared type
-                 * wild type
-                 */
                 t = peek(t);
-                continue;
+                storageClassSeen = true;
             }
-            break;
+            return storageClassSeen;
         }
 
-        if (!isBasicType(&t))
+        immutable bool anyStorageClass = skipStroageClassTypeCtor();
+        // If there are any storage classes, a type is optional and inferred if not present.
+        // That is exactly the case when an identifier follows plus either an opening parentheses (function declaration) or `=`.
+        if (!anyStorageClass || t.value != TOK.identifier || peek(t).value != TOK.leftParenthesis && peek(t).value != TOK.assign)
         {
+            const bool isBT = isBasicType(&t);
+            // printf("isDeclaration() (%d,%d) isBasicType: %d; anyStorageClass: %d\n", t.loc.linnum, t.loc.charnum, isBT, anyStorageClass);
+            if (!isBT && !anyStorageClass)
+            {
+                goto Lisnot;
+            }
+        }
+        {
+            int haveId = 0;
+            int haveTpl = 0;
+            const bool isDecl = isDeclarator(&t, &haveId, &haveTpl, endtok, anyStorageClass || needId != NeedDeclaratorId.mustIfDstyle);
+            // printf("isDeclaration() (%d,%d) isDeclarator: %d\n", t.loc.linnum, t.loc.charnum, isDecl);
+            if (!isDecl)
+                goto Lisnot;
+            // needed for `__traits(compiles, arr[0] = 0)`
+            if (!haveId && t.value == TOK.assign)
+                goto Lisnot;
+            if ((needId == NeedDeclaratorId.no && !haveId) ||
+                (needId == NeedDeclaratorId.opt) ||
+                (needId == NeedDeclaratorId.must && haveId) ||
+                (needId == NeedDeclaratorId.mustIfDstyle && haveId))
+            {
+                if (pt)
+                    *pt = t;
+                goto Lis;
+            }
             goto Lisnot;
         }
-        if (!isDeclarator(&t, &haveId, &haveTpl, endtok, needId != NeedDeclaratorId.mustIfDstyle))
-            goto Lisnot;
-        // needed for `__traits(compiles, arr[0] = 0)`
-        if (!haveId && t.value == TOK.assign)
-            goto Lisnot;
-        if ((needId == NeedDeclaratorId.no && !haveId) ||
-            (needId == NeedDeclaratorId.opt) ||
-            (needId == NeedDeclaratorId.must && haveId) ||
-            (needId == NeedDeclaratorId.mustIfDstyle && haveId))
-        {
-            if (pt)
-                *pt = t;
-            goto Lis;
-        }
-        goto Lisnot;
-
     Lis:
         //printf("\tis declaration, t = %s\n", t.toChars());
         return true;
@@ -7383,12 +7695,84 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             t = peek(t);
             if (t.value != TOK.leftParenthesis)
                 goto Lfalse;
+            goto case;
+
+        case TOK.leftParenthesis:
+            // (type)
             t = peek(t);
-            if (!isDeclaration(t, NeedDeclaratorId.no, TOK.rightParenthesis, &t))
+            while (t.value == TOK.const_ || t.value == TOK.immutable_ || t.value == TOK.inout_ || t.value == TOK.shared_)
+                t = peek(t);
+            RequireCallable requireCallable = RequireCallable.no;
+            do
             {
-                goto Lfalse;
+                if (t.value == TOK.extern_)
+                {
+                    t = peek(t);
+                    if (t.value != TOK.leftParenthesis)
+                        goto Lfalse;
+                    t = peek(t);
+                    if (t.value != TOK.identifier) goto Lfalse;
+                    switch (t.ident.toString())
+                    {
+                    case "D":
+                    case "System":
+                    case "Windows":
+                        t = peek(t);
+                        if (t.value != TOK.rightParenthesis) goto Lfalse;
+                        t = peek(t);
+                        break;
+
+                    case "C": // C or C++
+                        t = peek(t);
+                        if (t.value == TOK.plusPlus) // C++ linkage
+                        {
+                            t = peek(t);
+                        }
+                        if (t.value != TOK.rightParenthesis) goto Lfalse;
+                        t = peek(t);
+                        break;
+
+                    case "Objective": // Objective-C
+                        t = peek(t);
+                        if (t.value != TOK.min) goto Lfalse;
+                        t = peek(t);
+                        if (t.value != TOK.identifier || t.ident.toString() != "C") goto Lfalse;
+                        t = peek(t);
+                        if (t.value != TOK.rightParenthesis) goto Lfalse;
+                        t = peek(t);
+                        break;
+
+                    default:
+                        goto Lfalse;
+                    }
+
+                    requireCallable = RequireCallable.atLeastOne;
+                }
+                if (t.value == TOK.ref_)
+                {
+                    requireCallable = RequireCallable.atLeastOne;
+                    t = peek(t);
+                }
             }
+            while (t.value == TOK.ref_ || t.value == TOK.extern_);
+
+            while (t.value == TOK.const_ || t.value == TOK.immutable_ || t.value == TOK.inout_ || t.value == TOK.shared_)
+                t = peek(t);
+            if (!isBasicType(&t))
+                goto Lfalse;
+
+            int haveId = 1;
+            int haveTpl = 0;
+            if (!isDeclarator(&t, &haveId, &haveTpl, TOK.rightParenthesis, /*allowAltSyntax:*/true/*(default)*/, /*requireCallable:*/requireCallable))
+                goto Lfalse;
+            if (t.value != TOK.rightParenthesis)
+                goto Lfalse;
             t = peek(t);
+
+            // `(x) { }` in a template argument list is a problem; `(x)` is not a type, but read as if.
+            if (t.value == TOK.leftCurly)
+                goto Lfalse;
+
             break;
 
         default:
@@ -7403,11 +7787,17 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         return false;
     }
 
-    private bool isDeclarator(Token** pt, int* haveId, int* haveTpl, TOK endtok, bool allowAltSyntax = true)
+    enum RequireCallable
+    {
+        no, exactlyOne, atLeastOne
+    }
+
+    private bool isDeclarator(Token** pt, int* haveId, int* haveTpl, TOK endtok, bool allowAltSyntax = true, RequireCallable requireCallable = RequireCallable.no)
     {
         // This code parallels parseDeclarator()
         Token* t = *pt;
         bool parens;
+        uint callables = 0;
 
         //printf("Parser::isDeclarator() %s\n", t.toChars());
         if (t.value == TOK.assign)
@@ -7427,6 +7817,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 t = peek(t);
                 if (t.value == TOK.rightBracket)
                 {
+                    // [ ]
                     t = peek(t);
                 }
                 else if (isDeclaration(t, NeedDeclaratorId.no, TOK.rightBracket, &t))
@@ -7511,12 +7902,18 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 if (!isParameters(&t))
                     return false;
                 skipAttributes(t, &t);
+                ++callables;
                 continue;
 
             default:
                 break;
             }
             break;
+        }
+
+        if (requireCallable == RequireCallable.exactlyOne && callables != 1)
+        {
+            return false;
         }
 
         while (1)
@@ -8549,9 +8946,9 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                         goto case_delegate;
                     }
                 }
-                nextToken();
-                error("found `%s` when expecting function literal following `ref`", token.toChars());
-                goto Lerr;
+                t = parseType();
+                e = new AST.TypeExp(loc, t);
+                break;
             }
         case TOK.leftParenthesis:
             {
@@ -8616,6 +9013,33 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             {
                 AST.Dsymbol s = parseFunctionLiteral();
                 e = new AST.FuncExp(loc, s);
+
+                if (auto tpl = s.isTemplateDeclaration)
+                {
+                    assert(tpl.members.length == 1);
+                    auto fd = cast(AST.FuncLiteralDeclaration) (*tpl.members)[0];
+                    auto tf = cast(AST.TypeFunction) fd.type;
+                    if (tf.linkage != LINK.default_)
+                    {
+                        error("Explicit linkage for template lambdas is not supported, except for alias declarations.");
+                    }
+                }
+                else
+                {
+                    auto tf = cast(AST.TypeFunction) (cast(AST.FuncLiteralDeclaration) s).type;
+                    if (tf.linkage != LINK.default_)
+                    {
+                        auto resultId = new Identifier("__result");
+                        auto fd = new AST.FuncLiteralDeclaration(loc, Loc.initial, new AST.TypeFunction(AST.ParameterList(), null, LINK.default_), TOK.delegate_, null);
+                        auto vardecl = new AST.Dsymbols();
+                        vardecl.push(new AST.VarDeclaration(loc, null, resultId, new AST.ExpInitializer(loc, e)));
+                        fd.fbody = new AST.CompoundStatement(loc,
+                            new AST.ExpStatement(loc, new AST.DeclarationExp(loc, new AST.LinkDeclaration(loc, tf.linkage, vardecl))),
+                            new AST.ReturnStatement(loc, new AST.IdentifierExp(loc, resultId))
+                        );
+                        e = new AST.CallExp(loc, new AST.FuncExp(loc, fd));
+                    }
+                }
                 break;
             }
 
@@ -9523,8 +9947,26 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         }
 
         const stc = parseTypeCtor();
+        LINK getLinkage()
+        {
+            if (token.value != TOK.extern_) return LINK.default_;
+
+            auto l = parseLinkage();
+            // Reject C++-class-specific stuff
+            if (l.cppmangle != CPPMANGLE.def)
+                error("C++ mangle declaration not allowed here");
+            if (l.idents != null || l.identExps != null)
+                error("C++ namespaces not allowed here");
+            return l.link;
+        }
+        immutable link = getLinkage();
+        // Handle `ref` TypeCtors(opt) BasicType TypeSuffixes(opt) CallableSuffix NonCallableSuffixes(opt)
+        const bool isRef = token.value == TOK.ref_;
+        if (isRef) nextToken();
+        immutable link2 = getLinkage();
+        const stc2 = parseTypeCtor();
         auto t = parseBasicType(true);
-        t = parseTypeSuffixes(t);
+        t = parseTypeSuffixes(t, stc2, CallableIntroducer(link, link2, isRef));
         t = t.addSTC(stc);
         if (t.ty == Taarray)
         {
@@ -9597,7 +10039,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
     {
         if (mod.edition >= Edition.v2024)
         {
-            eSink.error(token.loc, "usage of identifer `body` as a keyword is obsolete. Use `do` instead.");
+            eSink.error(token.loc, "usage of identifier `body` as a keyword is obsolete. Use `do` instead.");
         }
     }
 }

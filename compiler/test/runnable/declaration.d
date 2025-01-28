@@ -56,7 +56,7 @@ void test6905()
     auto ref baz1() { static int n; return n; }
     auto ref baz2() {        int n; return n; }
     auto ref baz3() {               return 1; }
-    static assert(typeof(&baz1).stringof == "int delegate() nothrow @nogc ref @safe");
+    static assert(typeof(&baz1).stringof == "(ref int delegate() nothrow @nogc @safe)");
     static assert(typeof(&baz2).stringof == "int delegate() pure nothrow @nogc @safe");
     static assert(typeof(&baz3).stringof == "int delegate() pure nothrow @nogc @safe");
 }
