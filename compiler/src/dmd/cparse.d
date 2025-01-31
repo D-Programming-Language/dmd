@@ -143,6 +143,20 @@ final class CParser(AST) : Parser!AST
                 return wrap;
             }
 
+            if (token.value == TOK._module)
+            {
+                token.value = TOK.module_;
+                auto oldMd = this.md;
+                parseModuleDeclaration();
+                if (oldMd)
+                {
+                    // We only use the first module declaration,
+                    // subsequent __module statements should only come from #included files
+                    this.md = oldMd;
+                }
+                continue;
+            }
+
             /* GNU Extensions
              * external-declaration:
              *    simple-asm-expr ;

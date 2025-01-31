@@ -542,6 +542,7 @@ enum ignoreTokens
 
     _assert,
     _import,
+    _module,
     __cdecl,
     __declspec,
     __stdcall,
