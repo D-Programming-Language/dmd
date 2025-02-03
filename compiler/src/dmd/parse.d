@@ -2906,7 +2906,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                         const tv = peekNext();
                         Loc loc;
                         if (tpl && token.value == TOK.identifier &&
-                            (tv == TOK.comma || tv == TOK.rightParenthesis || tv == TOK.dotDotDot))
+                            (tv == TOK.comma || tv == TOK.rightParenthesis || tv == TOK.dotDotDot || tv == TOK.assign))
                         {
                             Identifier id = Identifier.generateId("__T");
                             loc = token.loc;
