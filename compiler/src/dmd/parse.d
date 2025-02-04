@@ -2791,7 +2791,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 {
                 case TOK.rightParenthesis:
                     if (storageClass != 0 || udas !is null)
-                        error("basic type expected, not `)`");
+                        error("primary type expected, not `)`");
                     break;
 
                 case TOK.dotDotDot:
@@ -3006,7 +3006,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             nextToken();
             int alt = 0;
             const typeLoc = token.loc;
-            memtype = parseBasicType();
+            memtype = parsePrimaryType();
             memtype = parseDeclarator(memtype, alt, null);
             checkCstyleTypeSyntax(typeLoc, memtype, alt, null);
         }
@@ -3118,7 +3118,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                     else
                     {
                         Token* t = &token;
-                        if (isBasicType(&t))
+                        if (isPrimaryType(&t))
                         {
                             error("named enum cannot declare member with type", (*t).toChars());
                             nextToken();
@@ -3519,7 +3519,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         const typeLoc = token.loc;
 
         AST.Type t;
-        t = parseBasicType();
+        t = parsePrimaryType();
 
         if (pdeclLoc)
             *pdeclLoc = token.loc;
@@ -3531,7 +3531,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         return t;
     }
 
-    private AST.Type parseBasicType(bool dontLookDotIdents = false)
+    private AST.Type parseBasicType(bool dontLookDotIdents = false, bool parsingPrimaryType = false)
     {
         AST.Type t;
         Loc loc;
@@ -3660,11 +3660,11 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             {
                 // ident!(template_arguments)
                 auto tempinst = new AST.TemplateInstance(loc, id, parseTemplateArguments());
-                t = parseBasicTypeStartingAt(new AST.TypeInstance(loc, tempinst), dontLookDotIdents);
+                t = parsePrimaryTypeStartingAt(new AST.TypeInstance(loc, tempinst), dontLookDotIdents);
             }
             else
             {
-                t = parseBasicTypeStartingAt(new AST.TypeIdentifier(loc, id), dontLookDotIdents);
+                t = parsePrimaryTypeStartingAt(new AST.TypeIdentifier(loc, id), dontLookDotIdents);
             }
             break;
 
@@ -3680,14 +3680,33 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
 
         case TOK.dot:
             // Leading . as in .foo
-            t = parseBasicTypeStartingAt(new AST.TypeIdentifier(token.loc, Id.empty), dontLookDotIdents);
+            t = parsePrimaryTypeStartingAt(new AST.TypeIdentifier(token.loc, Id.empty), dontLookDotIdents);
             break;
 
         case TOK.typeof_:
             // typeof(expression)
-            t = parseBasicTypeStartingAt(parseTypeof(), dontLookDotIdents);
+            t = parsePrimaryTypeStartingAt(parseTypeof(), dontLookDotIdents);
             break;
 
+        default:
+            immutable char* kind = parsingPrimaryType ? "primary" : "basic";
+            error("%s type expected, not `%s`", kind, token.toChars());
+            if (token.value == TOK.else_)
+                eSink.errorSupplemental(token.loc, "There's no `static else`, use `else` instead.");
+            t = AST.Type.terror;
+            break;
+        }
+        return t;
+    }
+
+    private AST.Type parsePrimaryType(bool dontLookDotIdents = false)
+    {
+        AST.Type t;
+        Loc loc;
+        Identifier id;
+        //printf("parsePrimaryType()\n");
+        switch (token.value)
+        {
         case TOK.vector:
             t = parseVector();
             break;
@@ -3735,20 +3754,17 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             break;
 
         default:
-            error("basic type expected, not `%s`", token.toChars());
-            if (token.value == TOK.else_)
-                eSink.errorSupplemental(token.loc, "There's no `static else`, use `else` instead.");
-            t = AST.Type.terror;
+            t = parseBasicType(dontLookDotIdents, /+parsingPrimaryType:+/true);
             break;
         }
         return t;
     }
 
-    private AST.Type parseBasicTypeStartingAt(AST.TypeQualified tid, bool dontLookDotIdents)
+    private AST.Type parsePrimaryTypeStartingAt(AST.TypeQualified tid, bool dontLookDotIdents)
     {
         AST.Type maybeArray = null;
         // See https://issues.dlang.org/show_bug.cgi?id=1215
-        // A basic type can look like MyType (typical case), but also:
+        // A primary type can look like MyType (typical case), but also:
         //  MyType.T -> A type
         //  MyType[expr] -> Either a static array of MyType or a type (iif MyType is a Ttuple)
         //  MyType[expr].T -> A type.
@@ -4469,7 +4485,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 }
                 else
                 {
-                    ts = parseBasicType();
+                    ts = parsePrimaryType();
                     ts = parseTypeSuffixes(ts);
                 }
             }
@@ -4923,7 +4939,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                     if (udas)
                         error("user-defined attributes not allowed for `alias` declarations");
 
-                    auto t = parseBasicType();
+                    auto t = parsePrimaryType();
                     t = parseTypeSuffixes(t);
                     if (token.value == TOK.identifier)
                     {
@@ -5067,7 +5083,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             {
                 // function type (parameters) { statements... }
                 // delegate type (parameters) { statements... }
-                tret = parseBasicType();
+                tret = parsePrimaryType();
                 tret = parseTypeSuffixes(tret); // function return type
             }
 
@@ -7171,7 +7187,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             break;
         }
 
-        if (!isBasicType(&t))
+        if (!isPrimaryType(&t))
         {
             goto Lisnot;
         }
@@ -7200,10 +7216,10 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         return false;
     }
 
-    // pt = test token. If found, pt is set to the token after BasicType
-    private bool isBasicType(Token** pt)
+    // pt = test token. If found, pt is set to the token after PrimaryType
+    private bool isPrimaryType(Token** pt)
     {
-        // This code parallels parseBasicType()
+        // This code parallels parsePrimaryType()
         Token* t = *pt;
         switch (t.value)
         {
@@ -7706,7 +7722,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
 
             default:
                 {
-                    if (!isBasicType(&t))
+                    if (!isPrimaryType(&t))
                         return false;
                 L2:
                     int tmp = false;
@@ -8745,7 +8761,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             {
                 StorageClass stc = parseTypeCtor();
 
-                AST.Type t = parseBasicType();
+                AST.Type t = parsePrimaryType();
                 t = t.addSTC(stc);
 
                 if (stc == 0 && token.value == TOK.dot)
@@ -9513,7 +9529,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
         }
 
         const stc = parseTypeCtor();
-        auto t = parseBasicType(true);
+        auto t = parsePrimaryType(true);
         t = parseTypeSuffixes(t);
         t = t.addSTC(stc);
         if (t.ty == Taarray)

@@ -1,0 +1,13 @@
+The term *basic type* is now *primary type*
+
+The parser now uses the term *primary type* for what used to be referred to as *basic type.*
+The term *basic type* is used specifically for type expressions that are not immediately recursive.
+
+A *basic type* is a *fundamental type* (those which have keywords)
+or a type given by an identifier, a `typeof`, a `mixin`, or a `__traits`.
+Absent from this list are `__vector` types and types spelled out using a qualifier and parentheses (e.g. `const(int)`).
+
+A *primary type* is a *basic type* or a `__vector` type or a qualified type.
+
+For the most part, *primary type* is the term you want to use and will see in error messages now.
+There are some corners where indeed a *basic type* is required.

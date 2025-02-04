@@ -1,0 +1,18 @@
+Specifying a qualified type as a base class or interface is an error now
+
+A type like `const(Object)` could be used as a base class in the base class list
+of a class or interface declaration or of an anonymous class object.
+There, qualifiers were simply ignored semantically.
+
+Explicitly qualifying types in base class lists is a parse error now.
+
+This only affects parsing.
+If a `mixin` or `typeof` or an identifier is used, nothing changes.
+If it resolves to a qualified type,
+the qualifier is ignored.
+---
+class C : const(Object) { } // Parse error now
+auto obj = new class const(Object) { }; // Parse error now
+---
+There is no deprecation period.
+The fix is to remove the unnecessary and misleading qualifier from your code.
