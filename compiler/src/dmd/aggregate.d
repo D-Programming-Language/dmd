@@ -132,6 +132,9 @@ extern (C++) abstract class AggregateDeclaration : ScopeDsymbol
 
     /// CtorDeclaration or TemplateDeclaration
     Dsymbol ctor;
+    /// If this aggregate is inside a TemplateDeclaration, this stores the cached overload
+    // set of ctors without substituted template arguments, for implicit template instantiation
+    private FuncDeclaration uninstantiatedCtors;
 
     /// default constructor - should have no arguments, because
     /// it would be stored in TypeInfo_Class.defaultConstructor
@@ -473,6 +476,48 @@ extern (C++) abstract class AggregateDeclaration : ScopeDsymbol
             }
         }
         return s;
+    }
+
+    /**
+     * Returns: for an aggregate inside a template declaration,
+     * get the template function declarations of constructors, without
+     * having their template arguments substituted. This is used to
+     * implicitly instantiate struct templates based on constructor arguments,
+     * e.g. Tuple(1, 2) => Tuple!(int, int)
+     */
+    extern (D) final FuncDeclaration getUninstantiatedCtors()
+    {
+        if (this.uninstantiatedCtors)
+            return this.uninstantiatedCtors;
+
+        void visit(Dsymbol mem)
+        {
+            if (auto fd = mem.isFuncDeclaration())
+            {
+                if (fd.isCtorDeclaration())
+                {
+                    assert(fd.overnext0 is null);
+                    fd.overnext0 = this.uninstantiatedCtors;
+                    this.uninstantiatedCtors = fd;
+                }
+            }
+        }
+
+        foreach (mem; *this.members)
+        {
+            visit(mem);
+            if (auto td = mem.isTemplateDeclaration())
+            {
+                if (!td.onemember)
+                    continue;
+                if (auto fd = td.onemember.isFuncDeclaration())
+                {
+                    // This doesn't really work, we need to combine the template argument lists
+                    visit(mem);
+                }
+            }
+        }
+        return this.uninstantiatedCtors;
     }
 
     override final Visibility visible() pure nothrow @nogc @safe

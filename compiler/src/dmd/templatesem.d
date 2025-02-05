@@ -2121,6 +2121,10 @@ void functionResolve(ref MatchAccumulator m, Dsymbol dstart, Loc loc, Scope* sc,
         //printf("td = %s\n", td.toChars());
 
         auto f = td.onemember ? td.onemember.isFuncDeclaration() : null;
+        if (!f && td.onemember)
+            if (auto ad = td.onemember.isAggregateDeclaration())
+                f = ad.getUninstantiatedCtors();
+
         if (!f)
         {
             if (!tiargs)
@@ -2366,7 +2370,8 @@ void functionResolve(ref MatchAccumulator m, Dsymbol dstart, Loc loc, Scope* sc,
     if (td_best && ti_best && m.count == 1)
     {
         // Matches to template function
-        assert(td_best.onemember && td_best.onemember.isFuncDeclaration());
+        assert(td_best.onemember);
+        assert(td_best.onemember.isFuncDeclaration() || td_best.onemember.isAggregateDeclaration());
         /* The best match is td_best with arguments tdargs.
          * Now instantiate the template.
          */
@@ -2377,7 +2382,12 @@ void functionResolve(ref MatchAccumulator m, Dsymbol dstart, Loc loc, Scope* sc,
         auto ti = new TemplateInstance(loc, td_best, ti_best.tiargs);
         ti.templateInstanceSemantic(sc, argumentList);
 
-        m.lastf = ti.toAlias().isFuncDeclaration();
+        auto ta = ti.toAlias();
+        if (auto ad = ta.isAggregateDeclaration())
+            m.lastf = ad.ctor.isFuncDeclaration();
+        else
+            m.lastf = ta.isFuncDeclaration();
+
         if (!m.lastf)
             goto Lnomatch;
         if (ti.errors)

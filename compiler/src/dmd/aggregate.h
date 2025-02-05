@@ -96,6 +96,9 @@ public:
     FuncDeclaration *inv;               // invariant
 
     Dsymbol *ctor;                      // CtorDeclaration or TemplateDeclaration
+private:
+    FuncDeclaration* uninstantiatedCtors;
+public:
 
     // default constructor - should have no arguments, because
     // it would be stored in TypeInfo_Class.defaultConstructor
