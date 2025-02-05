@@ -409,19 +409,6 @@ extern (C++) class ClassDeclaration : AggregateDeclaration
         return cd;
     }
 
-    override Scope* newScope(Scope* sc)
-    {
-        auto sc2 = super.newScope(sc);
-        if (isCOMclass())
-        {
-            /* This enables us to use COM objects under Linux and
-             * work with things like XPCOM
-             */
-            sc2.linkage = target.systemLinkage();
-        }
-        return sc2;
-    }
-
     /*********************************************
      * Determine if 'this' is a base class of cd.
      * This is used to detect circular inheritance only.
@@ -973,19 +960,6 @@ extern (C++) final class InterfaceDeclaration : ClassDeclaration
               : new InterfaceDeclaration(loc, ident, null);
         ClassDeclaration.syntaxCopy(id);
         return id;
-    }
-
-
-    override Scope* newScope(Scope* sc)
-    {
-        auto sc2 = super.newScope(sc);
-        if (com)
-            sc2.linkage = LINK.windows;
-        else if (classKind == ClassKind.cpp)
-            sc2.linkage = LINK.cpp;
-        else if (classKind == ClassKind.objc)
-            sc2.linkage = LINK.objc;
-        return sc2;
     }
 
     /*******************************************

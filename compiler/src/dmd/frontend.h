@@ -6610,7 +6610,6 @@ public:
     static ClassDeclaration* create(const Loc& loc, Identifier* id, Array<BaseClass* >* baseclasses, Array<Dsymbol* >* members, bool inObject);
     const char* toPrettyChars(bool qualifyTypes = false) override;
     ClassDeclaration* syntaxCopy(Dsymbol* s) override;
-    Scope* newScope(Scope* sc) override;
     enum : int32_t { OFFSET_RUNTIME = 1985229328 };
 
     enum : int32_t { OFFSET_FWDREF = 1985229329 };
@@ -6638,7 +6637,6 @@ class InterfaceDeclaration final : public ClassDeclaration
 {
 public:
     InterfaceDeclaration* syntaxCopy(Dsymbol* s) override;
-    Scope* newScope(Scope* sc) override;
     bool isBaseOf(ClassDeclaration* cd, int32_t* poffset) override;
     const char* kind() const override;
     int32_t vtblOffset() const override;

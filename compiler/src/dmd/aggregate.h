@@ -46,6 +46,8 @@ namespace dmd
     FuncDeclaration *search_toString(StructDeclaration *sd);
     void semanticTypeInfoMembers(StructDeclaration *sd);
     bool fill(StructDeclaration* sd, const Loc &loc, Expressions &elements, bool ctorinit);
+    Scope* newScope(AggregateDeclaration *d, Scope* sc);
+    Scope* newScope(AttribDeclaration *d, Scope* sc);
 }
 
 enum class ClassKind : uint8_t
@@ -117,7 +119,6 @@ public:
     d_bool disableNew;            // disallow allocations using `new`
     Sizeok sizeok;              // set when structsize contains valid data
 
-    virtual Scope *newScope(Scope *sc);
     virtual void finalizeSize() = 0;
     uinteger_t size(const Loc &loc) override final;
     Type *getType() override final;
@@ -281,7 +282,6 @@ public:
     static ClassDeclaration *create(const Loc &loc, Identifier *id, BaseClasses *baseclasses, Dsymbols *members, bool inObject);
     const char *toPrettyChars(bool QualifyTypes = false) override;
     ClassDeclaration *syntaxCopy(Dsymbol *s) override;
-    Scope *newScope(Scope *sc) override;
 
     #define OFFSET_RUNTIME 0x76543210
     #define OFFSET_FWDREF 0x76543211
@@ -313,7 +313,6 @@ class InterfaceDeclaration final : public ClassDeclaration
 {
 public:
     InterfaceDeclaration *syntaxCopy(Dsymbol *s) override;
-    Scope *newScope(Scope *sc) override;
     bool isBaseOf(ClassDeclaration *cd, int *poffset) override;
     const char *kind() const override;
     int vtblOffset() const override;

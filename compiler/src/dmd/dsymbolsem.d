@@ -7391,7 +7391,7 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
     }
 }
 
-extern(D) Scope* newScope(Dsymbol d, Scope* sc)
+extern(D) Scope* newScope(AttribDeclaration d, Scope* sc)
 {
     scope nsv = new NewScopeVisitor(sc);
     d.accept(nsv);
@@ -7526,6 +7526,48 @@ private extern(C++) class NewScopeVisitor : Visitor
     }
 }
 
+//newScope of Aggregate Declaration.
+extern(D) Scope* newScope(AggregateDeclaration d, Scope* sc)
+{
+    scope nsv = new NewScopeVisitor(sc);
+    d.accept(nsv);
+    return nsv.sc;
+}
+
+private extern(C++) class NewScopeVisitor2 : Visitor
+{
+    alias visit = typeof(super).visit;
+    Scope* sc;
+    this(Scope* sc)
+    {
+        this.sc = sc;
+    }
+
+    override void visit(ClassDeclaration cld)
+    {
+        auto sc2 = (cast(AggregateDeclaration)cld).newScope(sc);
+        if (cld.isCOMclass())
+        {
+            /* This enables us to use COM objects under Linux and
+             * work with things like XPCOM
+             */
+            sc2.linkage = target.systemLinkage();
+        }
+        sc = sc2;
+    }
+
+    override void visit(InterfaceDeclaration ifd)
+    {
+        auto sc2 = (cast(ClassDeclaration)ifd).newScope(sc);
+        if (ifd.com)
+            sc2.linkage = LINK.windows;
+        else if (ifd.classKind == ClassKind.cpp)
+            sc2.linkage = LINK.cpp;
+        else if (ifd.classKind == ClassKind.objc)
+            sc2.linkage = LINK.objc;
+        sc = sc2;
+    }
+}
 
 extern(C++) Dsymbols* include(Dsymbol d, Scope* sc)
 {
