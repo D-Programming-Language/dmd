@@ -17,6 +17,7 @@ import core.stdc.ctype;
 import core.stdc.stdio;
 import core.stdc.string;
 
+import dmd.astenums : Edition;
 import dmd.entity;
 import dmd.errorsink;
 import dmd.id;
@@ -88,6 +89,7 @@ class Lexer
 
     ErrorSink eSink;            /// send error messages through this interface
     CompileEnv compileEnv;      /// environment
+    Edition edition;            /// language edition that is in force
 
     private
     {
@@ -830,6 +832,22 @@ class Lexer
                             // Advance scanner to end of file
                             while (!(*p == 0 || *p == 0x1A))
                                 p++;
+                        }
+                    }
+                    if (this.edition >= Edition.v2024)
+                    {
+                        switch (t.value)
+                        {
+                            case TOK.imaginary32:
+                            case TOK.imaginary64:
+                            case TOK.imaginary80:
+                            case TOK.complex32:
+                            case TOK.complex64:
+                            case TOK.complex80:
+                                t.value = TOK.identifier;
+                                break;
+                            default:
+                                break;
                         }
                     }
                     //printf("t.value = %d\n",t.value);
@@ -3096,7 +3114,7 @@ class Lexer
             break;
         }
 
-        if ((*p == 'i' || *p == 'I') && !Ccompile)
+        if ((*p == 'i' || *p == 'I') && !Ccompile && this.edition < Edition.v2024)
         {
             if (*p == 'I')
                 error("use 'i' suffix instead of 'I'");
