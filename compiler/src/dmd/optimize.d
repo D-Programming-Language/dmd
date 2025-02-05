@@ -79,103 +79,106 @@ Expression expandVar(int result, VarDeclaration v)
         return nullReturn();
     if (!v.originalType && v.semanticRun < PASS.semanticdone) // semantic() not yet run
         v.dsymbolSemantic(null);
-    if (v.type &&
-        (v.isConst() || v.isImmutable() || v.storage_class & STC.manifest))
-    {
-        Type tb = v.type.toBasetype();
-        if (v.storage_class & STC.manifest ||
-            tb.isScalar() ||
-            ((result & WANTexpand) && (tb.ty != Tsarray && tb.ty != Tstruct)))
-        {
-            if (v._init)
-            {
-                if (v.inuse)
-                {
-                    if (v.storage_class & STC.manifest)
-                    {
-                        .error(v.loc, "%s `%s` recursive initialization of constant", v.kind, v.toPrettyChars);
-                        return errorReturn();
-                    }
-                    return nullReturn();
-                }
-                Expression ei = v.getConstInitializer();
-                if (!ei)
-                {
-                    if (v.storage_class & STC.manifest)
-                    {
-                        .error(v.loc, "%s `%s` enum cannot be initialized with `%s`", v.kind, v.toPrettyChars, dmd.hdrgen.toChars(v._init));
-                        return errorReturn();
-                    }
-                    return nullReturn();
-                }
-                if (ei.op == EXP.construct || ei.op == EXP.blit)
-                {
-                    auto ae = cast(AssignExp)ei;
-                    ei = ae.e2;
-                    if (ei.isConst() == 1)
-                    {
-                    }
-                    else if (ei.op == EXP.string_)
-                    {
-                        // https://issues.dlang.org/show_bug.cgi?id=14459
-                        // Do not constfold the string literal
-                        // if it's typed as a C string, because the value expansion
-                        // will drop the pointer identity.
-                        if (!(result & WANTexpand) && ei.type.toBasetype().ty == Tpointer)
-                            return nullReturn();
-                    }
-                    else
-                        return nullReturn();
-                    if (ei.type == v.type)
-                    {
-                        // const variable initialized with const expression
-                    }
-                    else if (ei.implicitConvTo(v.type) >= MATCH.constant)
-                    {
-                        // const var initialized with non-const expression
-                        ei = ei.implicitCastTo(null, v.type);
-                        ei = ei.expressionSemantic(null);
-                    }
-                    else
-                        return nullReturn();
-                }
-                else if (!(v.storage_class & STC.manifest) &&
-                         ei.isConst() != 1 &&
-                         ei.op != EXP.string_ &&
-                         ei.op != EXP.address)
-                {
-                    return nullReturn();
-                }
+    if (!v.type)
+        nullReturn();
 
-                if (!ei.type)
+    if ((!v.isConst() && !v.isImmutable() && !(v.storage_class & STC.manifest)))
+        nullReturn();
+
+    Type tb = v.type.toBasetype();
+    if (v.storage_class & STC.manifest ||
+        tb.isScalar() ||
+        ((result & WANTexpand) && (tb.ty != Tsarray && tb.ty != Tstruct)))
+    {
+        if (v._init)
+        {
+            if (v.inuse)
+            {
+                if (v.storage_class & STC.manifest)
                 {
-                    return nullReturn();
+                    .error(v.loc, "%s `%s` recursive initialization of constant", v.kind, v.toPrettyChars);
+                    return errorReturn();
+                }
+                return nullReturn();
+            }
+            Expression ei = v.getConstInitializer();
+            if (!ei)
+            {
+                if (v.storage_class & STC.manifest)
+                {
+                    .error(v.loc, "%s `%s` enum cannot be initialized with `%s`", v.kind, v.toPrettyChars, dmd.hdrgen.toChars(v._init));
+                    return errorReturn();
+                }
+                return nullReturn();
+            }
+            if (ei.op == EXP.construct || ei.op == EXP.blit)
+            {
+                auto ae = cast(AssignExp)ei;
+                ei = ae.e2;
+                if (ei.isConst() == 1)
+                {
+                }
+                else if (ei.op == EXP.string_)
+                {
+                    // https://issues.dlang.org/show_bug.cgi?id=14459
+                    // Do not constfold the string literal
+                    // if it's typed as a C string, because the value expansion
+                    // will drop the pointer identity.
+                    if (!(result & WANTexpand) && ei.type.toBasetype().ty == Tpointer)
+                        return nullReturn();
                 }
                 else
+                    return nullReturn();
+                if (ei.type == v.type)
                 {
-                    // Should remove the copy() operation by
-                    // making all mods to expressions copy-on-write
-                    return initializerReturn(ei.copy());
+                    // const variable initialized with const expression
                 }
+                else if (ei.implicitConvTo(v.type) >= MATCH.constant)
+                {
+                    // const var initialized with non-const expression
+                    ei = ei.implicitCastTo(null, v.type);
+                    ei = ei.expressionSemantic(null);
+                }
+                else
+                    return nullReturn();
+            }
+            else if (!(v.storage_class & STC.manifest) &&
+                     ei.isConst() != 1 &&
+                     ei.op != EXP.string_ &&
+                     ei.op != EXP.address)
+            {
+                return nullReturn();
+            }
+
+            if (!ei.type)
+            {
+                return nullReturn();
             }
             else
             {
-                // v does not have an initializer
-                version (all)
-                {
-                    return nullReturn();
-                }
-                else
-                {
-                    // BUG: what if const is initialized in constructor?
-                    auto e = v.type.defaultInit();
-                    e.loc = e1.loc;
-                    return initializerReturn(e);
-                }
+                // Should remove the copy() operation by
+                // making all mods to expressions copy-on-write
+                return initializerReturn(ei.copy());
             }
-            assert(0);
         }
+        else
+        {
+            // v does not have an initializer
+            version (all)
+            {
+                return nullReturn();
+            }
+            else
+            {
+                // BUG: what if const is initialized in constructor?
+                auto e = v.type.defaultInit();
+                e.loc = e1.loc;
+                return initializerReturn(e);
+            }
+        }
+        assert(0);
     }
+
     return nullReturn();
 }
 
