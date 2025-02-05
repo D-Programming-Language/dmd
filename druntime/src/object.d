@@ -3008,7 +3008,7 @@ T rehash(T : shared Value[Key], Value, Key)(T* aa)
  * Params:
  *      aa =     The associative array.
  */
-V[K] dup(T : V[K], K, V)(T aa)
+auto dup(T : V[K], K, V)(T aa)
 {
     //pragma(msg, "K = ", K, ", V = ", V);
 
@@ -3016,7 +3016,14 @@ V[K] dup(T : V[K], K, V)(T aa)
     static assert(is(typeof({ V v = aa[K.init]; })),
         "cannot call " ~ T.stringof ~ ".dup because " ~ V.stringof ~ " is not copyable");
 
-    V[K] result;
+    // bug 11725: return mutable AA if possible
+    import core.internal.traits : Unconst;
+    static if (is(V : Unconst!V))
+        alias Result = Unconst!V[K];
+    else // mutable dup not possible, return const object instead.
+        alias Result = V[K];
+
+    Result result;
 
     //foreach (k, ref v; aa)
     //    result[k] = v;  // Bug13701 - won't work if V is not mutable
@@ -3046,7 +3053,7 @@ V[K] dup(T : V[K], K, V)(T aa)
 }
 
 /** ditto */
-V[K] dup(T : V[K], K, V)(T* aa)
+auto dup(T : V[K], K, V)(T* aa)
 {
     return (*aa).dup;
 }
@@ -3058,6 +3065,28 @@ V[K] dup(T : V[K], K, V)(T* aa)
     auto a2 = aa.dup;
     aa["k2"] = 3;
     assert("k2" !in a2);
+}
+
+// bug 11725
+///
+@safe unittest
+{
+    const int[string] aa = ["a": 1, "b": 2];
+    // Copied AA values can be mutable
+    int[string] bb = aa.dup;
+    assert(bb == ["a": 1, "b": 2]);
+    assert(++bb["b"] == 3);
+}
+
+version (CoreUnittest)
+@safe test11725()
+{
+    // contra case of 11725: dup'ing an AA with elements that cannot convert to
+    // non-const should yield const AA instead.
+    class C { }
+    const C[string] aa = [ "a": new C ];
+    auto bb = aa.dup;
+    static assert(is(typeof(bb) == const(C)[string]));
 }
 
 // this should never be made public.
