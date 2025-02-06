@@ -4291,9 +4291,9 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
         // we need to turn that into:
         /+
             tuple(
-                .object.imported!"core.interpolation".InterpolationHeader(),
+                InterpolationHeader(),
                 ...
-                .object.imported!"core.interpolation".InterpolationFooter()
+                InterpolationFooter()
             )
 
             There the ... loops through them all, making the even ones
@@ -4309,12 +4309,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             error(e.loc, "String postfixes on interpolated expression sequences are not allowed.");
 
         Expression makeNonTemplateItem(Identifier which) {
-            Expression id = new IdentifierExp(e.loc, Id.empty);
-            id = new DotIdExp(e.loc, id, Id.object);
-            auto moduleNameArgs = new Objects();
-            moduleNameArgs.push(new StringExp(e.loc, "core.interpolation"));
-            id = new DotTemplateInstanceExp(e.loc, id, Id.imported, moduleNameArgs);
-            id = new DotIdExp(e.loc, id, which);
+            Expression id = new IdentifierExp(e.loc, which);
             id = new CallExp(e.loc, id, new Expressions());
             return id;
         }
