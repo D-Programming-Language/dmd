@@ -14,8 +14,6 @@
  */
 module rt.memset;
 
-import rt.util.utility : d_cdouble, d_creal;
-
 extern (C)
 {
     // Functions from the C library.
@@ -70,16 +68,6 @@ long *_memset64(long *p, long value, size_t count)
     return pstart;
 }
 
-d_cdouble *_memset128(d_cdouble *p, d_cdouble value, size_t count)
-{
-    d_cdouble *pstart = p;
-    d_cdouble *ptop;
-
-    for (ptop = &p[count]; p < ptop; p++)
-        *p = value;
-    return pstart;
-}
-
 void[] *_memset128ii(void[] *p, void[] value, size_t count)
 {
     void[] *pstart = p;
@@ -94,16 +82,6 @@ real *_memset80(real *p, real value, size_t count)
 {
     real *pstart = p;
     real *ptop;
-
-    for (ptop = &p[count]; p < ptop; p++)
-        *p = value;
-    return pstart;
-}
-
-d_creal *_memset160(d_creal *p, d_creal value, size_t count)
-{
-    d_creal *pstart = p;
-    d_creal *ptop;
 
     for (ptop = &p[count]; p < ptop; p++)
         *p = value;

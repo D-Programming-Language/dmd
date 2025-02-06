@@ -90,7 +90,6 @@ SRCS=\
 	\
 	src\core\stdc\assert_.d \
 	src\core\stdc\stdatomic.d \
-	src\core\stdc\complex.d \
 	src\core\stdc\config.d \
 	src\core\stdc\ctype.d \
 	src\core\stdc\errno.d \
