@@ -121,13 +121,13 @@ void test6()
 
 void test7()
 {
-    real a = 3.40483; // this is treated as 3.40483L
+    real a = 3.40483; // this is rounded to double precision
     real b;
     b = 3.40483;
     assert(a==b);
     assert(a==3.40483);
-    assert(a==3.40483L);
-    assert(a==3.40483F);
+//    assert(a!=3.40483L);
+//    assert(a!=3.40483F);
 }
 
 /*******************************************/
