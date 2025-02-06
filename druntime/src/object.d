@@ -3781,6 +3781,17 @@ template RTInfo(T)
         enum RTInfo = rtinfoNoPointers;
     else
         enum RTInfo = RTInfoImpl!(pointerBitmap).ptr;
+
+    static if (is (T == struct) && imported!"core.internal.traits".hasElaborateDestructor!T)
+    {
+        /// Verify that `destroy` works with `T.init`.
+        /// TODO: explain why
+        unittest
+        {
+            T t;
+            .destroy(t);
+        }
+    }
 }
 
 /**
