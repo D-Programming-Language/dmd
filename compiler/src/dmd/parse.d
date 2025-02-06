@@ -9548,8 +9548,15 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
     {
         if (s !is null)
         {
-            s.addComment(combineComments(blockComment, token.lineComment, true));
-            token.lineComment = null;
+            version (DMDLIB)
+            {
+                s.addComment(token.rawComment.ptr);
+            }
+            else
+            {
+                s.addComment(combineComments(blockComment, token.lineComment, true));
+                token.lineComment = null;
+            }
         }
     }
 

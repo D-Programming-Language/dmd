@@ -899,6 +899,10 @@ class Lexer
                         getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
                         lastDocLine = linnum;
                     }
+                    version (DMDLIB)
+                    {
+                        getRawComment(t);
+                    }
                     continue;
                 case '/': // do // style comments
                     startLoc = loc();
@@ -926,6 +930,10 @@ class Lexer
                             {
                                 getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
                                 lastDocLine = linnum;
+                            }
+                            version (DMDLIB)
+                            {
+                                getRawComment(t);
                             }
                             p = end;
                             t.loc = loc();
@@ -958,6 +966,10 @@ class Lexer
                     {
                         getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
                         lastDocLine = linnum;
+                    }
+                    version (DMDLIB)
+                    {
+                        getRawComment(t);
                     }
                     p++;
                     endOfLine();
@@ -1030,6 +1042,10 @@ class Lexer
                             // if /++ but not /++/
                             getDocComment(t, lastLine == startLoc.linnum, startLoc.linnum - lastDocLine > 1);
                             lastDocLine = linnum;
+                        }
+                        version (DMDLIB)
+                        {
+                            getRawComment(t);
                         }
                         continue;
                     }
@@ -3405,6 +3421,66 @@ class Lexer
         if (!msg && isBidiControl(u))
             msg = "Bidirectional control characters are disallowed for security reasons.";
         return u;
+    }
+
+    version (DMDLIB)
+    {
+        /***************************************************
+     * Parse a comment embedded between t.ptr and p.
+     * Remove trailing blanks and tabs from lines.
+     * Replace all newlines with \n.
+     * Preserve leading comment string in each line.
+     * Append to previous one for this token.
+     */
+        private void getRawComment(Token* t) pure
+        {
+            const(char)* q = t.ptr; // start of comment text
+            OutBuffer buf;
+
+            for (; q < p /* start of next token */ ; q++)
+            {
+                char c = *q;
+                switch (c)
+                {
+                case ' ':
+                case '\t':
+                    break;
+                case '\r':
+                    if (q[1] == '\n')
+                        continue; // skip the \r
+                    goto Lnewline;
+                default:
+                    if (c == 226)
+                    {
+                        // If LS or PS
+                        if (q[1] == 128 && (q[2] == 168 || q[2] == 169))
+                        {
+                            q += 2;
+                            goto Lnewline;
+                        }
+                    }
+                    break;
+                Lnewline:
+                    c = '\n'; // replace all newlines with \n
+                    break;
+                }
+                buf.writeByte(c);
+            }
+
+            // Always end with a newline
+            const s = buf[];
+            if (s.length == 0 || s[$ - 1] != '\n')
+                buf.writeByte('\n');
+
+            // Combine with previous comments, if any
+            if (t.rawComment)
+            {
+                auto comment = combineComments(t.rawComment, buf[], false);
+                t.rawComment = comment ? comment[0 .. strlen(comment)] : null;
+            }
+            else
+                t.rawComment = buf.extractSlice(true);
+        }
     }
 
     /***************************************************
