@@ -9079,6 +9079,14 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 e = new AST.CatExp(loc, e, e2);
                 continue;
 
+            case TOK.ltQuestion:
+            case TOK.gtQuestion:
+                EXP op = token.value == TOK.ltQuestion ? EXP.lessThan : EXP.greaterThan;
+                nextToken();
+                auto e2 = parseMulExp();
+                e = new AST.CondExp(loc, new AST.CmpExp(op, loc, e, e2), e, e2);
+                continue;
+
             default:
                 break;
             }
