@@ -163,7 +163,7 @@ Options:
         args = ["all"];
 
     // move any long-running tests to the front
-    static size_t sortKey(in ref Target target)
+    static size_t sortKey(const scope ref Target target)
     {
         const name = target.normalizedTestName;
         if (name.startsWith("runnable"))
