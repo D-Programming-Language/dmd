@@ -375,3 +375,23 @@ struct Result
     auto r = Result(&s);
     r.save();
 }
+
+/********************************************/
+
+void withOmatic()
+{
+    enum E { A, B }
+    E e;
+
+    {
+        with (E):
+            int i;
+            if (A)
+                return;
+    }
+    {
+        with (e)
+            if (A)
+                return;
+    }
+}

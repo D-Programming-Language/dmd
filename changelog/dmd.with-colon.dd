@@ -1,0 +1,24 @@
+Adds the with-colon statement.
+
+Like at the global declarations level, a `with (expression) :` can be used to create
+a scope until a `}` is encountered.
+
+---
+{
+    with (E):
+       statement;
+       statement;
+}
+---
+
+which is equivalent to:
+
+---
+{
+    with (E)
+    {
+       statement;
+       statement;
+    }
+}
+---

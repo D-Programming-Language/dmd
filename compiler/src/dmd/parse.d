@@ -5719,7 +5719,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
 
     /*****************************************
      * Input:
-     *      flags   PSxxxx
+     *      flags = ParseStatementFlags
      * Output:
      *      pEndloc if { ... statements ... }, store location of closing brace, otherwise loc of last token of statement
      */
@@ -6518,20 +6518,48 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 s = new AST.SynchronizedStatement(loc, exp, _body);
                 break;
             }
-        case TOK.with_:
+        case TOK.with_: // https://dlang.org/spec/statement.html#with-statement
             {
-                AST.Expression exp;
-                AST.Statement _body;
-                Loc endloc = loc;
+                Loc withLoc = loc;
 
                 nextToken();
                 check(TOK.leftParenthesis);
-                exp = parseExpression();
+                AST.Expression exp = parseExpression();
                 closeCondition("with", null, exp);
-                _body = parseStatement(ParseStatementFlags.scope_, null, &endloc);
-                s = new AST.WithStatement(loc, exp, _body, endloc);
+
+                if (token.value == TOK.colon)   // with (Expression) : StatementList
+                {
+                    nextToken();
+
+                    const lookingForElseSave = lookingForElse;
+                    lookingForElse = Loc.initial;
+
+                    auto statements = new AST.Statements();
+                    while (token.value != TOK.rightCurly && token.value != TOK.endOfFile)
+                    {
+                        statements.push(parseStatement(ParseStatementFlags.curlyScope | ParseStatementFlags.semiOk));
+                    }
+
+                    lookingForElse = lookingForElseSave;
+
+                    s = new AST.CompoundStatement(loc, statements);
+                    s = new AST.ScopeStatement(loc, s, token.loc);
+                    s = new AST.WithStatement(loc, exp, s, withLoc);
+
+                    if (token.value == TOK.endOfFile)
+                    {
+                        error(token.loc, "matching `}` expected following compound with statement, not `%s`",
+                            token.toChars());
+                        eSink.errorSupplemental(withLoc, "unmatched `with (exp):`");
+                        s = new AST.ErrorStatement();
+                    }
+                    break;
+                }
+                AST.Statement _body = parseStatement(ParseStatementFlags.scope_, null, &withLoc);
+                s = new AST.WithStatement(loc, exp, _body, withLoc);
                 break;
             }
+
         case TOK.try_:
             {
                 AST.Statement _body;
