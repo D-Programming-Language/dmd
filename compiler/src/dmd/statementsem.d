@@ -547,7 +547,7 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
              *     else
              *     { break; }
              */
-            _body = new IfStatement(ws.loc, ws.param, ws.condition, ws._body, new BreakStatement(ws.loc, null), ws.endloc);
+            _body = new IfStatement(ws.loc, ws.param, ws.condition, null, ws._body, new BreakStatement(ws.loc, null), ws.endloc);
             cond = IntegerExp.createBool(true);
         }
         Statement s = new ForStatement(ws.loc, null, cond, null, _body, ws.endloc);
@@ -591,6 +591,30 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
         result = ds;
     }
 
+    /* Rewrites:
+     * controlflow (auto v1 = i1, v2 = i2; condition [; increment]) { ... }
+     * to:
+     *  { auto v1 = i1, v2 = i2; controlflow ([;] condition [; increment]) { ... } }
+     * then lowered to:
+     *  auto v1 = i1;
+     *  try {
+     *    auto v2 = i2;
+     *    try {
+     *      controlflow ([;] condition [; increment]) { ... }
+     *    } finally { v2.~this(); }
+     *  } finally { v1.~this(); }
+     *  where controlflow = `for` or `if`
+     */
+    Statement expandInit(S)(S cfs)
+    {
+        auto ainit = new Statements();
+        ainit.push(cfs._init);
+        cfs._init = null;
+        ainit.push(cfs);
+        Statement s = new CompoundStatement(cfs.loc, ainit);
+        s = new ScopeStatement(cfs.loc, s, cfs.endloc);
+        return s.statementSemantic(sc);
+    }
     void visitFor(ForStatement fs)
     {
         /* https://dlang.org/spec/statement.html#for-statement
@@ -599,26 +623,7 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
 
         if (fs._init)
         {
-            /* Rewrite:
-             *  for (auto v1 = i1, v2 = i2; condition; increment) { ... }
-             * to:
-             *  { auto v1 = i1, v2 = i2; for (; condition; increment) { ... } }
-             * then lowered to:
-             *  auto v1 = i1;
-             *  try {
-             *    auto v2 = i2;
-             *    try {
-             *      for (; condition; increment) { ... }
-             *    } finally { v2.~this(); }
-             *  } finally { v1.~this(); }
-             */
-            auto ainit = new Statements();
-            ainit.push(fs._init);
-            fs._init = null;
-            ainit.push(fs);
-            Statement s = new CompoundStatement(fs.loc, ainit);
-            s = new ScopeStatement(fs.loc, s, fs.endloc);
-            s = s.statementSemantic(sc);
+            Statement s = expandInit(fs);
             if (!s.isErrorStatement())
             {
                 if (LabelStatement ls = checkLabeledLoop(sc, fs))
@@ -1637,6 +1642,11 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
         /* https://dlang.org/spec/statement.html#IfStatement
          */
 
+        if (ifs._init)
+        {
+            result = expandInit(ifs);
+            return;
+        }
         // check in syntax level
         ifs.condition = checkAssignmentAsCondition(ifs.condition, sc);
 
@@ -4161,7 +4171,7 @@ void catchSemantic(Catch c, Scope* sc)
 
             Expression ec = new IdentifierExp(loc, Id.ctfe);
             ec = new NotExp(loc, ec);
-            Statement s = new IfStatement(loc, null, ec, new ExpStatement(loc, e), null, loc);
+            Statement s = new IfStatement(loc, null, ec, null, new ExpStatement(loc, e), null, loc);
             c.handler = new TryFinallyStatement(loc, c.handler, s);
         }
 
@@ -4266,7 +4276,7 @@ Statement scopeCode(Statement statement, Scope* sc, out Statement sentry, out St
 
                 e = new VarExp(Loc.initial, v);
                 e = new NotExp(Loc.initial, e);
-                sfinally = new IfStatement(Loc.initial, null, e, s, null, Loc.initial);
+                sfinally = new IfStatement(Loc.initial, null, e, null, s, null, Loc.initial);
 
                 break;
             }

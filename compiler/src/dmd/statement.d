@@ -937,16 +937,18 @@ extern (C++) final class IfStatement : Statement
 {
     Parameter param;
     Expression condition;
+    Statement _init;     // if ( init ; condition )
     Statement ifbody;
     Statement elsebody;
     VarDeclaration match;   // for MatchExpression results
     Loc endloc;                 // location of closing curly bracket
 
-    extern (D) this(const ref Loc loc, Parameter param, Expression condition, Statement ifbody, Statement elsebody, Loc endloc) @safe
+    extern (D) this(const ref Loc loc, Parameter param, Expression condition, Statement _init, Statement ifbody, Statement elsebody, Loc endloc) @safe
     {
         super(loc, STMT.If);
         this.param = param;
         this.condition = condition;
+        this._init = _init;
         this.ifbody = ifbody;
         this.elsebody = elsebody;
         this.endloc = endloc;
@@ -957,6 +959,7 @@ extern (C++) final class IfStatement : Statement
         return new IfStatement(loc,
             param ? param.syntaxCopy() : null,
             condition.syntaxCopy(),
+            _init ? _init.syntaxCopy() : null,
             ifbody ? ifbody.syntaxCopy() : null,
             elsebody ? elsebody.syntaxCopy() : null,
             endloc);

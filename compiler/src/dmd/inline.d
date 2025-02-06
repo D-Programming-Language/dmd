@@ -325,7 +325,7 @@ public:
 
         static if (asStatements)
         {
-            result = new IfStatement(s.loc, s.param, econd, ifbody, elsebody, s.endloc);
+            result = new IfStatement(s.loc, s.param, econd, s._init, ifbody, elsebody, s.endloc);
         }
         else
         {
@@ -1034,7 +1034,7 @@ public:
                     return null;
                 auto ifbody   = !s1 ? new ExpStatement(e.e1.loc, e.e1) : s1;
                 auto elsebody = !s2 ? new ExpStatement(e.e2.loc, e.e2) : s2;
-                return new IfStatement(exp.loc, null, e.econd, ifbody, elsebody, exp.loc);
+                return new IfStatement(exp.loc, null, e.econd, null, ifbody, elsebody, exp.loc);
             }
             if (auto e = exp.isCommaExp())
             {

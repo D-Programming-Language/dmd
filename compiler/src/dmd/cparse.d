@@ -514,7 +514,7 @@ final class CParser(AST) : Parser!AST
             else
                 elsebody = null;
             if (condition && ifbody)
-                s = new AST.IfStatement(loc, null, condition, ifbody, elsebody, token.loc);
+                s = new AST.IfStatement(loc, null, condition, null, ifbody, elsebody, token.loc);
             else
                 s = null; // don't propagate parsing errors
             break;

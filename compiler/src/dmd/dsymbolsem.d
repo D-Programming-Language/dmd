@@ -2703,7 +2703,7 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
             }
             IntegerExp cmp = isDestructor ? IntegerExp.literal!0 : IntegerExp.literal!1;
             e = new EqualExp(EXP.notEqual, Loc.initial, e, cmp);
-            s = new IfStatement(Loc.initial, null, e, new ReturnStatement(Loc.initial, null), null, Loc.initial);
+            s = new IfStatement(Loc.initial, null, e, null, new ReturnStatement(Loc.initial, null), null, Loc.initial);
 
             sa.push(s);
             if (sd.fbody)

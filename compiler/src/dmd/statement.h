@@ -366,6 +366,7 @@ class IfStatement final : public Statement
 public:
     Parameter *param;
     Expression *condition;
+    Statement* _init;
     Statement *ifbody;
     Statement *elsebody;
     VarDeclaration *match;      // for MatchExpression results

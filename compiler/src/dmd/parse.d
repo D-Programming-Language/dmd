@@ -6187,10 +6187,20 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             }
         case TOK.if_:
             {
+                AST.Statement _init;
                 nextToken();
                 check(TOK.leftParenthesis);
                 auto param = parseAssignCondition();
-                auto condition = parseExpression();
+                // if ( _init ; condition )
+                if (token.value == TOK.semicolon)
+                {
+                    const lookingForElseSave = lookingForElse;
+                    lookingForElse = Loc.initial;
+                    _init = parseStatement(0);
+                    lookingForElse = lookingForElseSave;
+                    nextToken();
+                }
+                AST.Expression condition = parseExpression();
                 closeCondition("if", param, condition);
 
                 {
@@ -6209,7 +6219,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 else
                     elsebody = null;
                 if (condition && ifbody)
-                    s = new AST.IfStatement(loc, param, condition, ifbody, elsebody, token.loc);
+                    s = new AST.IfStatement(loc, param, condition, _init, ifbody, elsebody, token.loc);
                 else
                     s = null; // don't propagate parsing errors
                 break;
