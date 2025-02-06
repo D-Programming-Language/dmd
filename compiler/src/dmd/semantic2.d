@@ -389,6 +389,16 @@ private extern(C++) final class Semantic2Visitor : Visitor
                 if (linkage1 != f2.resolvedLinkage())
                     return 0;
 
+                if (f1.visibility.kind != f2.visibility.kind)
+                {
+                    deprecation(f1.loc, "overload set `%s` cannot contain functions with different access specifiers", f1.toChars());
+                    deprecationSupplemental(f1.loc, "function `%s` has access specifier `%s`", f1.toPrettyChars(), visibilityToChars(f1.visibility.kind));
+                    deprecationSupplemental(f2.loc, "function `%s` has access specifier `%s`", f2.toPrettyChars(), visibilityToChars(f2.visibility.kind));
+                    auto fd_tmp = f1.visibility.kind < f2.visibility.kind ? f1 : f2;
+                    deprecationSupplemental(fd_tmp.loc, "renaming `%s` will fix this", fd_tmp.toPrettyChars());
+                    return 0;
+                }
+
                 // Functions with different names never conflict
                 // (they can form overloads sets introduced by an alias)
                 if (f1.ident != f2.ident)
