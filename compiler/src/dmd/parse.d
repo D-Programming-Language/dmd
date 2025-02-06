@@ -8608,6 +8608,28 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 e = new AST.FuncExp(loc, s);
                 break;
             }
+        case TOK.version_:
+            {
+                import dmd.cond: findCondition;
+                import dmd.globals: global;
+
+                nextToken();
+                auto condition = cast(AST.VersionCondition) parseVersionCondition();
+
+                if (mod.versionids && findCondition(*mod.versionids, condition.ident))
+                {
+                    e = new AST.IntegerExp(loc, 1, AST.Type.tbool);
+                }
+                else if (findCondition(global.versionids, condition.ident))
+                {
+                    e = new AST.IntegerExp(loc, 1, AST.Type.tbool);
+                }
+                else
+                {
+                    e = new AST.IntegerExp(loc, 0, AST.Type.tbool);
+                }
+                break;
+            }
 
         default:
             error("expression expected, not `%s`", token.toChars());

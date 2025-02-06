@@ -44,9 +44,20 @@ void test2()
 
 /*******************************************/
 
+void test3()
+{
+    int valueA = version(foo) ? 42 : 0;
+    int valueB = version(notfoo) ? 42 : 0;
+    assert(valueA == 42);
+    assert(valueB == 0);
+}
+
+/*******************************************/
+
 int main()
 {
     test1();
     test2();
+    test3();
     return 0;
 }
