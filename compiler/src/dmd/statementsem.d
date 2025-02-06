@@ -3183,19 +3183,19 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
         else
         {
             Type texp = ws.exp.type;
-            Type t = texp.toBasetype();
-
-            Expression olde = ws.exp;
-            if (t.ty == Tpointer)
+            if (!texp)
             {
-                ws.exp = new PtrExp(ws.loc, ws.exp);
-                ws.exp = ws.exp.expressionSemantic(sc);
-                texp = ws.exp.type;
-                t = texp.toBasetype();
+                error(ws.loc, "Expression has no type.");
+                return setError();
             }
 
-            assert(t);
-            t = t.toBasetype();
+            Type t = texp.toBasetype();
+            if (!t)
+            {
+                error(ws.loc, "Unable to resolve base type.");
+                return setError();
+            }
+
             if (t.isClassHandle())
             {
                 _init = new ExpInitializer(ws.loc, ws.exp);
@@ -3234,8 +3234,7 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
                 ws.wthis.storage_class |= STC.temp;
                 ws.wthis.dsymbolSemantic(sc);
                 sym = new WithScopeSymbol(ws);
-                // Need to set the scope to make use of resolveAliasThis
-                sym.setScope(sc);
+                sym.setScope(sc); // Enable resolveAliasThis
                 sym.parent = sc.scopesym;
                 sym.endlinnum = ws.endloc.linnum;
             }
@@ -3248,7 +3247,7 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
             }
             else
             {
-                error(ws.loc, "`with` expression types must be enums or aggregates or pointers to them, not `%s`", olde.type.toChars());
+                error(ws.loc, "`with` expression types must be enums, structs, or classes, not `%s`", t.toChars());
                 return setError();
             }
         }
