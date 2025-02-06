@@ -11,3 +11,6 @@ trace.log
 /msvc*.obj
 make
 *.lst
+
+# generated during the build
+/src/core/sys/linux/config.d

@@ -30,3 +30,5 @@ deprecated("use _ATFILE_SOURCE")
 enum __USE_ATFILE = _ATFILE_SOURCE;
 deprecated("use _GNU_SOURCE")
 enum __USE_GNU = _GNU_SOURCE;
+
+enum __HAVE_CLOSEFROM = @HAVE_CLOSEFROM@;
