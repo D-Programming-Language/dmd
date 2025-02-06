@@ -1750,7 +1750,7 @@ elem* toElem(Expression e, ref IRState irs)
          */
         if (!irs.params.useGC)
         {
-            irs.eSink.error(ce.loc, "array concatenation of expression `%s` requires the GC which is not available with -betterC", ce.toChars());
+            irs.eSink.error(ce.loc, "`%s` is not allowed in -betterC mode because it requires the garbage collector.", ce.toChars());
             return el_long(TYint, 0);
         }
 
