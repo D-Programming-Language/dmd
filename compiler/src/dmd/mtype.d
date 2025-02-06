@@ -3642,6 +3642,46 @@ extern (C++) final class TypeTuple : Type
     {
         v.visit(this);
     }
+
+    override final Type makeConst()
+    {
+        if (mcache && mcache.cto)
+        {
+            assert(mcache.cto.isConst());
+            return mcache.cto;
+        }
+        TypeTuple t = cast(TypeTuple) Type.makeConst();
+        if (arguments)
+        {
+            t.arguments = new Parameters(arguments.length);
+            foreach (i, ref arg; *t.arguments)
+            {
+                auto tsrc = (*arguments)[i].type;
+                arg = new Parameter(Loc.initial, 0, tsrc.addSTC(STC.const_), null, null, null);
+            }
+        }
+        return t;
+    }
+
+    override final Type makeImmutable()
+    {
+        if (mcache && mcache.ito)
+        {
+            assert(mcache.ito.isImmutable());
+            return mcache.ito;
+        }
+        TypeTuple t = cast(TypeTuple) Type.makeImmutable();
+        if (arguments)
+        {
+            t.arguments = new Parameters(arguments.length);
+            foreach (i, ref arg; *t.arguments)
+            {
+                auto tsrc = (*arguments)[i].type;
+                arg = new Parameter(Loc.initial, 0, tsrc.immutableOf(), null, null, null);
+            }
+        }
+        return t;
+    }
 }
 
 /***********************************************************
