@@ -580,6 +580,31 @@ private extern(C++) final class DsymbolSemanticVisitor : Visitor
         if (dsym.semanticRun >= PASS.semanticdone)
             return;
 
+        /* https://issues.dlang.org/show_bug.cgi?id=9146
+         *
+         * If a variable declaration is analyzed with gagged error messages,
+         * then the compiler does not redo semantic in ungagged mode.
+         * To fix this, we check if we are in a non-speculative context
+         * (e.g. module member scope) and temporarily disable gagging.
+         *
+         * This sort of shenaningans is required because of the rudimentary
+         * error reporting mechanism in dmd-fe. Having a queue of errors
+         * might be more memory consuming, however, it would make error
+         * handling a lot more precise.
+         */
+        bool unGaggedNonSpeculative = false;
+        scope(exit)
+        {
+            if (unGaggedNonSpeculative)
+                ++global.gag;
+        }
+
+        if (sc && !sc.func && global.gag && sc.minst && !sc.tinst && !sc.intypeof)
+        {
+            unGaggedNonSpeculative = true;
+            --global.gag;
+        }
+
         if (sc && sc.inunion && sc.inunion.isAnonDeclaration())
             dsym.overlapped = true;
 
