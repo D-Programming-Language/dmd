@@ -299,7 +299,6 @@ public:
     bool hasPointers() override final;
     bool canTakeAddressOf();
     bool needsScopeDtor();
-    void checkCtorConstInit() override final;
     Dsymbol *toAlias() override final;
     // Eliminate need for dynamic_cast
     VarDeclaration *isVarDeclaration() override final { return (VarDeclaration *)this; }
