@@ -1,0 +1,40 @@
+Typesafe variadic class parameters have been deprecated
+
+This obscure feature allowed a limited form of implicit construction:
+
+---
+void check(bool x, Exception e...)
+{
+    if (!x)
+        throw e;
+}
+
+void main(string[] args)
+{
+    check(args.length > 1, "missing argument");
+}
+---
+
+However, few uses of this feature have been found, and one project was actually mistakenly using it instead of the more common Typesafe variadic array parameter.
+Considering D doesn't support implicit construction and already has a confusing amount of different variadic parameter forms, it was decided to remove this feature.
+
+As a corrective action, either call the constructor in the callee:
+
+---
+void check(string msg)
+{
+    if (!x)
+        throw new Exception(msg);
+}
+---
+
+Or let the caller construct the class instance:
+
+---
+void check(bool x, Exception e);
+
+void main(string[] args)
+{
+    check(args.length > 1, new Exception("missing argument"));
+}
+---

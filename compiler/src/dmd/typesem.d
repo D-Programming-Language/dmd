@@ -2493,10 +2493,18 @@ Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
                     errors = true;
                 }
 
-                const bool isTypesafeVariadic = i + 1 == dim &&
-                                                tf.parameterList.varargs == VarArg.typesafe &&
-                                                (t.isTypeDArray() || t.isTypeClass());
-                if (isTypesafeVariadic)
+                const bool isTypesafeVariadic = i + 1 == dim && tf.parameterList.varargs == VarArg.typesafe;
+                const bool isStackAllocatedVariadic = isTypesafeVariadic && (t.isTypeDArray() || t.isTypeClass());
+
+                if (isTypesafeVariadic && t.isTypeClass())
+                {
+                    // @@@DEPRECATED_2.121@@@
+                    // Deprecated in 2.111, make it an error in 2.121
+                    .deprecation(loc, "typesafe variadic parameters with a `class` type (`%s %s...`) are deprecated",
+                        t.isTypeClass().sym.ident.toChars(), fparam.toChars());
+                }
+
+                if (isStackAllocatedVariadic)
                 {
                     /* typesafe variadic arguments are constructed on the stack, so must be `scope`
                      */
@@ -2518,7 +2526,7 @@ Type typeSemantic(Type type, const ref Loc loc, Scope* sc)
                         }
                     }
 
-                    if (isTypesafeVariadic)
+                    if (isStackAllocatedVariadic)
                     {
                         /* This is because they can be constructed on the stack
                          * https://dlang.org/spec/function.html#typesafe_variadic_functions
