@@ -4285,6 +4285,7 @@ else
     ///
     float   acosf(float x);
     ///
+    pragma(mangle, __acosl_mangle)
     real    acosl(real x);
 
     ///
@@ -4292,6 +4293,7 @@ else
     ///
     float   asinf(float x);
     ///
+    pragma(mangle, __asinl_mangle)
     real    asinl(real x);
 
     ///
@@ -4299,6 +4301,7 @@ else
     ///
     pure float   atanf(float x);
     ///
+    pragma(mangle, __atanl_mangle)
     pure real    atanl(real x);
 
     ///
@@ -4306,6 +4309,7 @@ else
     ///
     float   atan2f(float y, float x);
     ///
+    pragma(mangle, __atan2l_mangle)
     real    atan2l(real y, real x);
 
     ///
@@ -4313,6 +4317,7 @@ else
     ///
     pure float   cosf(float x);
     ///
+    pragma(mangle, __cosl_mangle)
     pure real    cosl(real x);
 
     ///
@@ -4320,6 +4325,7 @@ else
     ///
     pure float   sinf(float x);
     ///
+    pragma(mangle, __sinl_mangle)
     pure real    sinl(real x);
 
     ///
@@ -4327,6 +4333,7 @@ else
     ///
     pure float   tanf(float x);
     ///
+    pragma(mangle, __tanl_mangle)
     pure real    tanl(real x);
 
     ///
@@ -4334,6 +4341,7 @@ else
     ///
     float   acoshf(float x);
     ///
+    pragma(mangle, __acoshl_mangle)
     real    acoshl(real x);
 
     ///
@@ -4341,6 +4349,7 @@ else
     ///
     pure float   asinhf(float x);
     ///
+    pragma(mangle, __asinhl_mangle)
     pure real    asinhl(real x);
 
     ///
@@ -4348,6 +4357,7 @@ else
     ///
     float   atanhf(float x);
     ///
+    pragma(mangle, __atanhl_mangle)
     real    atanhl(real x);
 
     ///
@@ -4355,6 +4365,7 @@ else
     ///
     float   coshf(float x);
     ///
+    pragma(mangle, __coshl_mangle)
     real    coshl(real x);
 
     ///
@@ -4362,6 +4373,7 @@ else
     ///
     float   sinhf(float x);
     ///
+    pragma(mangle, __sinhl_mangle)
     real    sinhl(real x);
 
     ///
@@ -4369,6 +4381,7 @@ else
     ///
     pure float   tanhf(float x);
     ///
+    pragma(mangle, __tanhl_mangle)
     pure real    tanhl(real x);
 
     ///
@@ -4376,6 +4389,7 @@ else
     ///
     float   expf(float x);
     ///
+    pragma(mangle, __expl_mangle)
     real    expl(real x);
 
     ///
@@ -4383,6 +4397,7 @@ else
     ///
     float   exp2f(float x);
     ///
+    pragma(mangle, __exp2l_mangle)
     real    exp2l(real x);
 
     ///
@@ -4390,6 +4405,7 @@ else
     ///
     float   expm1f(float x);
     ///
+    pragma(mangle, __expm1l_mangle)
     real    expm1l(real x);
 
     ///
@@ -4397,6 +4413,7 @@ else
     ///
     pure float   frexpf(float value, int* exp);
     ///
+    pragma(mangle, __frexpl_mangle)
     pure real    frexpl(real value, int* exp);
 
     ///
@@ -4404,6 +4421,7 @@ else
     ///
     int     ilogbf(float x);
     ///
+    pragma(mangle, __ilogbl_mangle)
     int     ilogbl(real x);
 
     ///
@@ -4411,6 +4429,7 @@ else
     ///
     float   ldexpf(float x, int exp);
     ///
+    pragma(mangle, __ldexpl_mangle)
     real    ldexpl(real x, int exp);
 
     ///
@@ -4418,6 +4437,7 @@ else
     ///
     float   logf(float x);
     ///
+    pragma(mangle, __logl_mangle)
     real    logl(real x);
 
     ///
@@ -4425,6 +4445,7 @@ else
     ///
     float   log10f(float x);
     ///
+    pragma(mangle, __log10l_mangle)
     real    log10l(real x);
 
     ///
@@ -4432,6 +4453,7 @@ else
     ///
     float   log1pf(float x);
     ///
+    pragma(mangle, __log1pl_mangle)
     real    log1pl(real x);
 
     ///
@@ -4439,6 +4461,7 @@ else
     ///
     float   log2f(float x);
     ///
+    pragma(mangle, __log2l_mangle)
     real    log2l(real x);
 
     ///
@@ -4446,6 +4469,7 @@ else
     ///
     float   logbf(float x);
     ///
+    pragma(mangle, __logbl_mangle)
     real    logbl(real x);
 
     ///
@@ -4453,6 +4477,7 @@ else
     ///
     pure float   modff(float value, float* iptr);
     ///
+    pragma(mangle, __modfl_mangle)
     pure real    modfl(real value, real *iptr);
 
     ///
@@ -4460,6 +4485,7 @@ else
     ///
     float   scalbnf(float x, int n);
     ///
+    pragma(mangle, __scalbnl_mangle)
     real    scalbnl(real x, int n);
 
     ///
@@ -4467,6 +4493,7 @@ else
     ///
     float   scalblnf(float x, c_long n);
     ///
+    pragma(mangle, __scalblnl_mangle)
     real    scalblnl(real x, c_long n);
 
     ///
@@ -4474,6 +4501,7 @@ else
     ///
     pure float   cbrtf(float x);
     ///
+    pragma(mangle, __cbrtl_mangle)
     pure real    cbrtl(real x);
 
     ///
@@ -4486,6 +4514,7 @@ else
         ///
         pure float   fabsf(float x);
         ///
+    pragma(mangle, __fabsl_mangle)
         pure real    fabsl(real x);
     }
 
@@ -4494,6 +4523,7 @@ else
     ///
     float   hypotf(float x, float y);
     ///
+    pragma(mangle, __hypotl_mangle)
     real    hypotl(real x, real y);
 
     ///
@@ -4501,6 +4531,7 @@ else
     ///
     float   powf(float x, float y);
     ///
+    pragma(mangle, __powl_mangle)
     real    powl(real x, real y);
 
     ///
@@ -4508,6 +4539,7 @@ else
     ///
     float   sqrtf(float x);
     ///
+    pragma(mangle, __sqrtl_mangle)
     real    sqrtl(real x);
 
     ///
@@ -4515,6 +4547,7 @@ else
     ///
     pure float   erff(float x);
     ///
+    pragma(mangle, __erfl_mangle)
     pure real    erfl(real x);
 
     ///
@@ -4522,6 +4555,7 @@ else
     ///
     float   erfcf(float x);
     ///
+    pragma(mangle, __erfcl_mangle)
     real    erfcl(real x);
 
     ///
@@ -4529,6 +4563,7 @@ else
     ///
     float   lgammaf(float x);
     ///
+    pragma(mangle, __lgammal_mangle)
     real    lgammal(real x);
 
     ///
@@ -4536,6 +4571,7 @@ else
     ///
     float   tgammaf(float x);
     ///
+    pragma(mangle, __tgammal_mangle)
     real    tgammal(real x);
 
     ///
@@ -4543,6 +4579,7 @@ else
     ///
     pure float   ceilf(float x);
     ///
+    pragma(mangle, __ceill_mangle)
     pure real    ceill(real x);
 
     ///
@@ -4550,6 +4587,7 @@ else
     ///
     pure float   floorf(float x);
     ///
+    pragma(mangle, __floorl_mangle)
     pure real    floorl(real x);
 
     ///
@@ -4557,6 +4595,7 @@ else
     ///
     pure float   nearbyintf(float x);
     ///
+    pragma(mangle, __nearbyintl_mangle)
     pure real    nearbyintl(real x);
 
     ///
@@ -4564,6 +4603,7 @@ else
     ///
     pure float   rintf(float x);
     ///
+    pragma(mangle, __rintl_mangle)
     pure real    rintl(real x);
 
     ///
@@ -4571,6 +4611,7 @@ else
     ///
     c_long  lrintf(float x);
     ///
+    pragma(mangle, __lrintl_mangle)
     c_long  lrintl(real x);
 
     ///
@@ -4578,6 +4619,7 @@ else
     ///
     long    llrintf(float x);
     ///
+    pragma(mangle, __llrintl_mangle)
     long    llrintl(real x);
 
     ///
@@ -4585,6 +4627,7 @@ else
     ///
     pure float   roundf(float x);
     ///
+    pragma(mangle, __roundl_mangle)
     pure real    roundl(real x);
 
     ///
@@ -4592,6 +4635,7 @@ else
     ///
     c_long  lroundf(float x);
     ///
+    pragma(mangle, __lroundl_mangle)
     c_long  lroundl(real x);
 
     ///
@@ -4599,6 +4643,7 @@ else
     ///
     long    llroundf(float x);
     ///
+    pragma(mangle, __llroundl_mangle)
     long    llroundl(real x);
 
     ///
@@ -4606,6 +4651,7 @@ else
     ///
     pure float   truncf(float x);
     ///
+    pragma(mangle, __truncl_mangle)
     pure real    truncl(real x);
 
     ///
@@ -4613,6 +4659,7 @@ else
     ///
     float   fmodf(float x, float y);
     ///
+    pragma(mangle, __fmodl_mangle)
     real    fmodl(real x, real y);
 
     ///
@@ -4620,6 +4667,7 @@ else
     ///
     float   remainderf(float x, float y);
     ///
+    pragma(mangle, __remainderl_mangle)
     real    remainderl(real x, real y);
 
     ///
@@ -4627,6 +4675,7 @@ else
     ///
     float   remquof(float x, float y, int* quo);
     ///
+    pragma(mangle, __remquol_mangle)
     real    remquol(real x, real y, int* quo);
 
     ///
@@ -4634,6 +4683,7 @@ else
     ///
     pure float   copysignf(float x, float y);
     ///
+    pragma(mangle, __copysignl_mangle)
     pure real    copysignl(real x, real y);
 
     ///
@@ -4641,6 +4691,7 @@ else
     ///
     pure float   nanf(char* tagp);
     ///
+    pragma(mangle, __nanl_mangle)
     pure real    nanl(char* tagp);
 
     ///
@@ -4648,13 +4699,17 @@ else
     ///
     float   nextafterf(float x, float y);
     ///
+    pragma(mangle, __nextafterl_mangle)
     real    nextafterl(real x, real y);
 
     ///
+    pragma(mangle, __nexttoward_mangle)
     double  nexttoward(double x, real y);
     ///
+    pragma(mangle, __nexttowardf_mangle)
     float   nexttowardf(float x, real y);
     ///
+    pragma(mangle, __nexttowardl_mangle)
     real    nexttowardl(real x, real y);
 
     ///
@@ -4662,6 +4717,7 @@ else
     ///
     float   fdimf(float x, float y);
     ///
+    pragma(mangle, __fdiml_mangle)
     real    fdiml(real x, real y);
 
     ///
@@ -4669,6 +4725,7 @@ else
     ///
     pure float   fmaxf(float x, float y);
     ///
+    pragma(mangle, __fmaxl_mangle)
     pure real    fmaxl(real x, real y);
 
     ///
@@ -4676,6 +4733,7 @@ else
     ///
     pure float   fminf(float x, float y);
     ///
+    pragma(mangle, __fminl_mangle)
     pure real    fminl(real x, real y);
 
     ///
@@ -4683,5 +4741,131 @@ else
     ///
     pure float   fmaf(float x, float y, float z);
     ///
+    pragma(mangle, __fmal_mangle)
     pure real    fmal(real x, real y, real z);
+
+    version (D_PPCUseIEEE128)
+    {
+        enum __acoshl_mangle = "__acoshieee128";
+        enum __acosl_mangle = "__acosieee128";
+        enum __asinhl_mangle = "__asinhieee128";
+        enum __asinl_mangle = "__asinieee128";
+        enum __atan2l_mangle = "__atan2ieee128";
+        enum __atanhl_mangle = "__atanhieee128";
+        enum __atanl_mangle = "__atanieee128";
+        enum __cbrtl_mangle = "__cbrtieee128";
+        enum __ceill_mangle = "__ceilieee128";
+        enum __copysignl_mangle = "__copysignieee128";
+        enum __coshl_mangle = "__coshieee128";
+        enum __cosl_mangle = "__cosieee128";
+        enum __erfcl_mangle = "__erfcieee128";
+        enum __erfl_mangle = "__erfieee128";
+        enum __exp2l_mangle = "__exp2ieee128";
+        enum __expl_mangle = "__expieee128";
+        enum __expm1l_mangle = "__expm1ieee128";
+        enum __fabsl_mangle = "__fabsieee128";
+        enum __fdiml_mangle = "__fdimieee128";
+        enum __floorl_mangle = "__floorieee128";
+        enum __fmal_mangle = "__fmaieee128";
+        enum __fmaxl_mangle = "__fmaxieee128";
+        enum __fminl_mangle = "__fminieee128";
+        enum __fmodl_mangle = "__fmodieee128";
+        enum __frexpl_mangle = "__frexpieee128";
+        enum __hypotl_mangle = "__hypotieee128";
+        enum __ilogbl_mangle = "__ilogbieee128";
+        enum __ldexpl_mangle = "__ldexpieee128";
+        enum __lgammal_mangle = "__lgammaieee128";
+        enum __llrintl_mangle = "__llrintieee128";
+        enum __llroundl_mangle = "__llroundieee128";
+        enum __log10l_mangle = "__log10ieee128";
+        enum __log1pl_mangle = "__log1pieee128";
+        enum __log2l_mangle = "__log2ieee128";
+        enum __logbl_mangle = "__logbieee128";
+        enum __logl_mangle = "__logieee128";
+        enum __lrintl_mangle = "__lrintieee128";
+        enum __lroundl_mangle = "__lroundieee128";
+        enum __modfl_mangle = "__modfieee128";
+        enum __nanl_mangle = "__nanieee128";
+        enum __nearbyintl_mangle = "__nearbyintieee128";
+        enum __nextafterl_mangle = "__nextafterieee128";
+        enum __nexttoward_mangle = "__nexttoward_to_ieee128";
+        enum __nexttowardf_mangle = "__nexttowardf_to_ieee128";
+        enum __nexttowardl_mangle = "__nexttowardieee128";
+        enum __powl_mangle = "__powieee128";
+        enum __remainderl_mangle = "__remainderieee128";
+        enum __remquol_mangle = "__remquoieee128";
+        enum __rintl_mangle = "__rintieee128";
+        enum __roundl_mangle = "__roundieee128";
+        enum __scalblnl_mangle = "__scalblnieee128";
+        enum __scalbnl_mangle = "__scalbnieee128";
+        enum __sinhl_mangle = "__sinhieee128";
+        enum __sinl_mangle = "__sinieee128";
+        enum __sqrtl_mangle = "__sqrtieee128";
+        enum __tanhl_mangle = "__tanhieee128";
+        enum __tanl_mangle = "__tanieee128";
+        enum __tgammal_mangle = "__tgammaieee128";
+        enum __truncl_mangle = "__truncieee128";
+    }
+    else
+    {
+        enum __acoshl_mangle = "acoshl";
+        enum __acosl_mangle = "acosl";
+        enum __asinhl_mangle = "asinhl";
+        enum __asinl_mangle = "asinl";
+        enum __atan2l_mangle = "atan2l";
+        enum __atanhl_mangle = "atanhl";
+        enum __atanl_mangle = "atanl";
+        enum __cbrtl_mangle = "cbrtl";
+        enum __ceill_mangle = "ceill";
+        enum __copysignl_mangle = "copysignl";
+        enum __coshl_mangle = "coshl";
+        enum __cosl_mangle = "cosl";
+        enum __erfcl_mangle = "erfcl";
+        enum __erfl_mangle = "erfl";
+        enum __exp2l_mangle = "exp2l";
+        enum __expl_mangle = "expl";
+        enum __expm1l_mangle = "expm1l";
+        enum __fabsl_mangle = "fabsl";
+        enum __fdiml_mangle = "fdiml";
+        enum __floorl_mangle = "floorl";
+        enum __fmal_mangle = "fmal";
+        enum __fmaxl_mangle = "fmaxl";
+        enum __fminl_mangle = "fminl";
+        enum __fmodl_mangle = "fmodl";
+        enum __frexpl_mangle = "frexpl";
+        enum __hypotl_mangle = "hypotl";
+        enum __ilogbl_mangle = "ilogbl";
+        enum __ldexpl_mangle = "ldexpl";
+        enum __lgammal_mangle = "lgammal";
+        enum __llrintl_mangle = "llrintl";
+        enum __llroundl_mangle = "llroundl";
+        enum __log10l_mangle = "log10l";
+        enum __log1pl_mangle = "log1pl";
+        enum __log2l_mangle = "log2l";
+        enum __logbl_mangle = "logbl";
+        enum __logl_mangle = "logl";
+        enum __lrintl_mangle = "lrintl";
+        enum __lroundl_mangle = "lroundl";
+        enum __modfl_mangle = "modfl";
+        enum __nanl_mangle = "nanl";
+        enum __nearbyintl_mangle = "nearbyintl";
+        enum __nextafterl_mangle = "nextafterl";
+        enum __nexttoward_mangle = "nexttoward";
+        enum __nexttowardf_mangle = "nexttowardf";
+        enum __nexttowardl_mangle = "nexttowardl";
+        enum __powl_mangle = "powl";
+        enum __remainderl_mangle = "remainderl";
+        enum __remquol_mangle = "remquol";
+        enum __rintl_mangle = "rintl";
+        enum __roundl_mangle = "roundl";
+        enum __scalblnl_mangle = "scalblnl";
+        enum __scalbnl_mangle = "scalbnl";
+        enum __sinhl_mangle = "sinhl";
+        enum __sinl_mangle = "sinl";
+        enum __sqrtl_mangle = "sqrtl";
+        enum __tanhl_mangle = "tanhl";
+        enum __tanl_mangle = "tanl";
+        enum __tgammal_mangle = "tgammal";
+        enum __truncl_mangle = "truncl";
+    }
 }

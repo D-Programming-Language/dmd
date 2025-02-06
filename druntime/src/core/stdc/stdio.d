@@ -1305,6 +1305,7 @@ else version (CRuntime_Glibc)
 {
     ///
     pragma(printf)
+    pragma(mangle, __fprintf_mangle)
     int fprintf(FILE* stream, scope const char* format, scope const ...);
     ///
     pragma(scanf)
@@ -1313,6 +1314,7 @@ else version (CRuntime_Glibc)
     alias fscanf = __isoc99_fscanf;
     ///
     pragma(printf)
+    pragma(mangle, __sprintf_mangle)
     int sprintf(scope char* s, scope const char* format, scope const ...);
     ///
     pragma(scanf)
@@ -1321,6 +1323,7 @@ else version (CRuntime_Glibc)
     alias sscanf = __isoc99_sscanf;
     ///
     pragma(printf)
+    pragma(mangle, __vfprintf_mangle)
     int vfprintf(FILE* stream, scope const char* format, va_list arg);
     ///
     pragma(scanf)
@@ -1329,6 +1332,7 @@ else version (CRuntime_Glibc)
     alias vfscanf = __isoc99_vfscanf;
     ///
     pragma(printf)
+    pragma(mangle, __vsprintf_mangle)
     int vsprintf(scope char* s, scope const char* format, va_list arg);
     ///
     pragma(scanf)
@@ -1337,6 +1341,7 @@ else version (CRuntime_Glibc)
     alias vsscanf = __isoc99_vsscanf;
     ///
     pragma(printf)
+    pragma(mangle, __vprintf_mangle)
     int vprintf(scope const char* format, va_list arg);
     ///
     pragma(scanf)
@@ -1345,12 +1350,32 @@ else version (CRuntime_Glibc)
     alias vscanf = __isoc99_vscanf;
     ///
     pragma(printf)
+    pragma(mangle, __printf_mangle)
     int printf(scope const char* format, scope const ...);
     ///
     pragma(scanf)
     int __isoc99_scanf(scope const char* format, scope ...);
     ///
     alias scanf = __isoc99_scanf;
+
+    version (D_PPCUseIEEE128)
+    {
+        enum __fprintf_mangle = "__fprintfieee128";
+        enum __printf_mangle = "__printfieee128";
+        enum __sprintf_mangle = "__sprintfieee128";
+        enum __vfprintf_mangle = "__vfprintfieee128";
+        enum __vprintf_mangle = "__vprintfieee128";
+        enum __vsprintf_mangle = "__vsprintfieee128";
+    }
+    else
+    {
+        enum __fprintf_mangle = "fprintf";
+        enum __printf_mangle = "printf";
+        enum __sprintf_mangle = "sprintf";
+        enum __vfprintf_mangle = "vfprintf";
+        enum __vprintf_mangle = "vprintf";
+        enum __vsprintf_mangle = "vsprintf";
+    }
 }
 else
 {
