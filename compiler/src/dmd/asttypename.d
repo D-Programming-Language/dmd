@@ -73,47 +73,69 @@ string astTypeName(RootObject node)
     }
 }
 
-extern(D) enum mixin_string =
-({
-    string astTypeNameFunctions;
-    string visitOverloads;
-
-    foreach (ov; __traits(getOverloads, Visitor, "visit"))
-    {
-        static if (is(typeof(ov) P == function))
-        {
-            static if (is(P[0] S == super) && is(S[0] == ASTNode))
-            {
-                astTypeNameFunctions ~= `
-string astTypeName(` ~ P[0].stringof ~ ` node)
+// workaround: can't use `is` to (re)declare P inside static foreach
+private template Parameters(alias func)
 {
-    scope tsv = new AstTypeNameVisitor;
-    node.accept(tsv);
-    return tsv.typeName;
+    static if (is(typeof(func) P == function))
+        alias Parameters = P;
+    else
+        static assert(0, "argument has no parameters");
 }
-`;
-            }
 
-            visitOverloads ~= `
-    override void visit (` ~ P[0].stringof ~ ` _)
+private template parentAST(T)
+{
+    static if (is(T S == super) && is(S[0] == ASTNode))
+        enum parentAST = true;
+    else
+        enum parentAST = false;
+}
+
+static foreach (ov; __traits(getOverloads, Visitor, "visit"))
+{
+    static if (is(typeof(ov) == function))
     {
-        typeName = "` ~ P[0].stringof ~ `";
-    }
-`;
+        static if (parentAST!(Parameters!ov[0]))
+        {
+            string astTypeName(Parameters!ov[0] node)
+            {
+                scope tsv = new AstTypeNameVisitor;
+                node.accept(tsv);
+                return tsv.typeName;
+            }
         }
     }
+}
 
-    return astTypeNameFunctions ~ `
+version(none)
+static foreach (ov; __traits(getOverloads, dmd.asttypename, "astTypeName"))
+{
+    pragma(msg, typeof(ov));
+}
+
 private extern(C++) final class AstTypeNameVisitor : Visitor
 {
     alias visit = Visitor.visit;
-public :
+public:
     string typeName;
-` ~ visitOverloads ~ "}";
-}());
 
-// pragma(msg, mixin_string);
-mixin(mixin_string);
+    static foreach (ov; __traits(getOverloads, Visitor, "visit"))
+    {
+        static if (is(typeof(ov) == function))
+        {
+            override void visit(Parameters!ov[0] a)
+            {
+                typeName = typeof(a).stringof;
+            }
+        }
+    }
+}
+
+version(none)
+static foreach (ov; __traits(getOverloads, AstTypeNameVisitor, "visit"))
+{
+    pragma(msg, typeof(ov));
+}
+
 ///
 unittest
 {
