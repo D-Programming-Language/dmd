@@ -1,0 +1,11 @@
+Add cast(ref T)e as shorthand for *cast(T*)&e
+
+A `cast(ref T)e` takes `e` representing an lvalue and forcibly changes
+its type to `T`. It is equivalent to the expression `*cast(T*)&e`.
+)
+
+---
+int i = 73;
+float f = *cast(float*)&i;  // reinterprets the integer bit pattern as a float
+float g = cast(ref float)i; // equivalent to the previous statement
+---

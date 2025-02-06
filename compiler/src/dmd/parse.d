@@ -8678,9 +8678,17 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
             break;
 
         case TOK.cast_: // cast(type) expression
-            {
+            {   // https://dlang.org/spec/expression.html#cast_expressions
                 nextToken();
                 check(TOK.leftParenthesis);
+
+                bool castRef;
+                if (token.value == TOK.ref_)   // cast(ref ...)
+                {
+                    castRef = true;
+                    nextToken();
+                }
+
                 /* Look for cast(), cast(const), cast(immutable),
                  * cast(shared), cast(shared const), cast(wild), cast(shared wild)
                  */
@@ -8724,6 +8732,10 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                 }
                 if (token.value == TOK.rightParenthesis)
                 {
+                    /* https://dlang.org/spec/expression.html#CastQual
+                     */
+                    if (castRef)
+                        error("`cast(ref` needs to be followed with a type");
                     nextToken();
                     e = parseUnaryExp();
                     e = new AST.CastExp(loc, e, m);
@@ -8734,7 +8746,19 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                     t = t.addSTC(AST.ModToStc(m)); // cast( const type )
                     check(TOK.rightParenthesis);
                     e = parseUnaryExp();
-                    e = new AST.CastExp(loc, e, t);
+                    if (castRef)
+                    {
+                        /* Rewrite cast(ref T)e as *cast(T*)&e
+                         */
+                        t = new AST.TypePointer(t);
+                        e = new AST.AddrExp(loc, e);
+                        e = new AST.CastExp(loc, e, t);
+                        e = new AST.PtrExp(loc, e);
+                    }
+                    else
+                    {
+                        e = new AST.CastExp(loc, e, t);
+                    }
                 }
                 break;
             }
