@@ -689,6 +689,10 @@ bool gatherTestParameters(ref TestArgs testArgs, string input_dir, string input_
     if (testArgs.mode == TestMode.FAIL_COMPILE)
         testArgs.requiredArgs = "-verrors=simple -verrors=0 " ~ testArgs.requiredArgs;
 
+    // *.c tests: don't link druntime/Phobos
+    if (input_file.extension() == ".c")
+        testArgs.requiredArgs = "-defaultlib= " ~ testArgs.requiredArgs;
+
     {
         string argSetsStr;
         findTestParameter(envData, file, "ARG_SETS", argSetsStr, ";");
