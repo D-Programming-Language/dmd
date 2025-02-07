@@ -27,10 +27,14 @@ import dmd.common.outbuffer;
 import dmd.root.rmem;
 import dmd.root.string : toDString;
 
+nothrow:
+
 private immutable supportedPre2017Versions = ["14.0", "12.0", "11.0", "10.0", "9.0"];
 
 extern(C++) struct VSOptions
 {
+  nothrow:
+
     // evaluated once at startup, reflecting the result of vcvarsall.bat
     //  from the current environment or the latest Visual Studio installation
     const(char)* WindowsSdkDir;
