@@ -57,6 +57,44 @@ bool checkAccess(AggregateDeclaration ad, Loc loc, Scope* sc, Dsymbol smember)
     return false;
 }
 
+/**
+ * Same as checkAccess(AggregateDeclaration), but for module-level, static, and
+ * nested functions and variables.
+ */
+bool checkAccess(Loc loc, Scope* sc, Dsymbol d)
+{
+    Dsymbol origin = sc.func ? sc.func : sc._module;
+
+    // If accessed from a template instance, check if the symbol is passed by alias.
+    auto ti = origin.parent ? origin.parent.isTemplateInstance() : null;
+    if (ti && ti.tiargs)
+    {
+        foreach (arg; *ti.tiargs)
+        {
+            if (arg == d)
+                return false;
+        }
+    }
+
+    if (!checkSymbolAccess(sc, d))
+    {
+        import dmd.hdrgen : parametersTypeToChars;
+
+        if (auto fd = d.isFuncDeclaration())
+            error(loc, "%s `%s%s` is not accessible from %s `%s`",
+                d.kind(), d.toPrettyChars(),
+                fd.type.toTypeFunction().parameterList.parametersTypeToChars(),
+                origin.kind(), origin.toPrettyChars());
+        else
+            error(loc, "%s `%s` is not accessible from %s `%s`",
+                d.kind(), d.toPrettyChars(), origin.kind(), origin.toPrettyChars());
+        //printf("d = %s %s, vis = %d, semanticRun = %d\n",
+        //        d.kind(), d.toPrettyChars(), d.visible() d.semanticRun);
+        return true;
+    }
+    return false;
+}
+
 /****************************************
  * Determine if scope sc has package level access to s.
  */
@@ -185,7 +223,7 @@ bool checkAccess(Loc loc, Scope* sc, Expression e, Dsymbol d)
     }
 
     if (!e)
-        return false;
+        return checkAccess(loc, sc, d);
 
     if (auto tc = e.type.isTypeClass())
     {
