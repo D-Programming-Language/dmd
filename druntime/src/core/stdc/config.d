@@ -278,6 +278,21 @@ else
     alias cpp_ptrdiff_t = ptrdiff_t;
 }
 
+version (Windows)
+{
+    enum __c_wchar_t : wchar;
+
+    alias c_wchar_t = wchar;
+    alias cpp_wchar_t = __c_wchar_t;
+}
+else
+{
+    enum __c_wchar_t : dchar;
+
+    alias c_wchar_t = dchar;
+    alias cpp_wchar_t = __c_wchar_t;
+}
+
 /** ABI layout of native complex types.
  */
 struct _Complex(T)

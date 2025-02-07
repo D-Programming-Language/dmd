@@ -14,6 +14,8 @@
 
 module core.stdc.stddef;
 
+import core.stdc.config;
+
 extern (C):
 @trusted: // Types only.
 nothrow:
@@ -24,18 +26,5 @@ alias nullptr_t = typeof(null);
 
 // size_t and ptrdiff_t are defined in the object module.
 
-version (Windows)
-{
-    ///
-    alias wchar wchar_t;
-}
-else version (Posix)
-{
-    ///
-    alias dchar wchar_t;
-}
-else version (WASI)
-{
-    ///
-    alias dchar wchar_t;
-}
+///
+alias wchar_t = cpp_wchar_t;

@@ -4,11 +4,7 @@
 // N.B MSVC doesn't have a C++11 switch, but it defaults to the latest fully-supported standard
 // N.B MSVC 2013 doesn't support char16_t/char32_t
 
-version(Posix)
-    enum __c_wchar_t : dchar;
-else version(Windows)
-    enum __c_wchar_t : wchar;
-alias wchar_t = __c_wchar_t;
+import core.stdc.stddef : wchar_t;
 
 extern(C++) {
 
