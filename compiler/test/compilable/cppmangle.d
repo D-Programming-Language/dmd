@@ -1136,11 +1136,7 @@ else version (CppMangle_Itanium)
 // https://issues.dlang.org/show_bug.cgi?id=18958
 // Issue 18958 - extern(C++) wchar, dchar mangling not correct
 
-version (Posix)
-    enum __c_wchar_t : dchar;
-else version (Windows)
-    enum __c_wchar_t : wchar;
-alias wchar_t = __c_wchar_t;
+import core.stdc.stddef : wchar_t;
 extern (C++) void test_char_mangling(char, wchar, dchar, wchar_t);
 version (CppMangle_Itanium)
 {

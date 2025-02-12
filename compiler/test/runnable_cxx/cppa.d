@@ -13,6 +13,7 @@ import core.stdc.stdio;
 import core.stdc.stdarg;
 import core.stdc.config;
 import core.stdc.stdint;
+import core.stdc.stddef;
 
 extern (C++)
         int foob(int i, int j, int k);
@@ -553,15 +554,6 @@ void test13289()
     assert(f13289_cpp_test());
 }
 
-version(Posix)
-{
-    enum __c_wchar_t : dchar;
-}
-else version(Windows)
-{
-    enum __c_wchar_t : wchar;
-}
-alias wchar_t = __c_wchar_t;
 extern(C++)
 {
     bool f13289_cpp_test();
