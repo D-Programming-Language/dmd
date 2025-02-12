@@ -1,6 +1,7 @@
 module core.sys.linux.unistd;
 
 public import core.sys.posix.unistd;
+import core.sys.linux.config;
 
 version (linux):
 extern(C):
@@ -23,5 +24,6 @@ char* getpass(const(char)* prompt);
 // Exit all threads in a process
 void exit_group(int status);
 
+static if (__HAVE_CLOSEFROM)
 /// Close all open file descriptors greater or equal to `lowfd`
 void closefrom(int lowfd);
