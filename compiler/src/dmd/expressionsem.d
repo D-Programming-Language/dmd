@@ -7196,6 +7196,17 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
          * is(targ id :  tok2)
          * is(targ id == tok2)
          */
+        /* disallow is(Type : TypeSpecialization, tparams) when the spec
+         * is an alias template instance, because DIP1023 isn't implemented */
+        if (e.tspec && e.parameters && e.parameters.length)
+        if (auto ti = e.tspec.isTypeInstance())
+        {
+            auto ds = sc.search(e.loc, ti.tempinst.name, null);
+            if (ds)
+            if (auto td = ds.isTemplateDeclaration())
+            if (td.onemember && td.onemember.isAliasDeclaration())
+                e.error("cannot infer parameters for `is` TypeSpecialization when it is an alias template instance");
+        }
         Type tded = null;
 
         void yes()
