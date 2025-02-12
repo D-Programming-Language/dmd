@@ -910,6 +910,24 @@ dmd -cov -unittest myprog.d
             "Pass $(I driverflag) to the linker driver (`$CC` or `cc`)",
             cast(TargetOS) (TargetOS.all & ~cast(uint)TargetOS.Windows)
         ),
+        Option("-b",
+            "print backend IR using infix notation"
+        ),
+        Option("-c",
+            "print data flow optimizations performed, show generated code"
+        ),
+        Option("-f",
+            "use with -b to print backend IR using prefix binary tree notation"
+        ),
+        Option("-r",
+            "show the register allocator at work, see which variables go in which registers"
+        ),
+        Option("-x",
+            "show the common subexpression eliminator at work in non-optimized builds"
+        ),
+        Option("-y",
+            "track changes to the backend symbol table"
+        ),
     ];
 
     /// Representation of a CLI feature
