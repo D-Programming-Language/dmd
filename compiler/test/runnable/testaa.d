@@ -1314,9 +1314,9 @@ void test14321()
     Bar[string] bars;
     assert(Bar.op == "");
     bars["test"] = Bar(42);     // initialization
-    assert(Bar.op == "");
-    bars["test"] = Bar(42);     // assignment
     assert(Bar.op == "d");
+    bars["test"] = Bar(42);     // assignment
+    assert(Bar.op == "dd");
 }
 
 /************************************************/
@@ -1334,6 +1334,35 @@ void test19112()
 }
 
 /************************************************/
+// https://issues.dlang.org/show_bug.cgi?id=23932
+
+void test23932()
+{
+    static class C
+    {
+        int[int] aa;
+
+        this()
+        {
+            try
+            {
+                aa[42] = {
+                    if (true)
+                        throw new Exception("oops");
+                    else
+                        return 9;
+                }();
+            }
+            catch (Exception e) {}
+        }
+    }
+
+    auto c = new C;
+    assert(c.aa.length == 0);
+}
+
+/************************************************/
+
 
 int main()
 {
@@ -1385,6 +1414,7 @@ int main()
     test14089();
     test14321();
     test19112();
+    test23932();
 
     printf("Success\n");
     return 0;

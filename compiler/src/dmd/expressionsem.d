@@ -11541,7 +11541,36 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
         exp.type = exp.e1.type;
         assert(exp.type);
         auto assignElem = exp.e2;
-        auto res = exp.op == EXP.assign ? exp.reorderSettingAAElem(sc) : exp;
+
+        /***
+         * https://issues.dlang.org/show_bug.cgi?id=23932
+         *
+         * For AA item assignments of type struct, the compiler
+         * lowers code such as `aa[key] = e2;`, to:
+         *
+         *   ref __aatmp = aa;
+         *   ref __aakey = key;
+         *   ref __aaval = e2;
+         *   (__aakey in __aatmp
+         *       ? __aatmp[__aakey].opAssign(__aaval)
+         *       : ConstructExp(__aatmp[__aakey], __aaval));
+         *
+         * However, if `aa[key] = e2` is actually a construct expression
+         * (for example, the first assignment of aa in a constructor),
+         * then the side effects are no longer extracted, causing the
+         * manifestation of Issue 23932.
+         *
+         * To fix this, we call `reorderSettingAAElem` to extract side effects
+         * on all assignments (construct or assign), excepting on the ConstructExps
+         * that were already lowered.
+         */
+
+        Expression res;
+        auto ve = assignElem.isVarExp();
+        if (ve && (ve.var.storage_class & STC.temp) && ve.var.storage_class & (STC.ref_ | STC.rvalue))
+                res = exp;
+        else
+            res = exp.reorderSettingAAElem(sc);
         /* https://issues.dlang.org/show_bug.cgi?id=22366
          *
          * `reorderSettingAAElem` creates a tree of comma expressions, however,
