@@ -1321,23 +1321,21 @@ Expression semanticTraits(TraitsExp e, Scope* sc)
         }
         else if (s)
         {
-            // @@@DEPRECATION 2.100.2
             if (auto fd = s.isFuncDeclaration())
             {
                 if (fd.overnext)
                 {
-                    deprecation(e.loc, "`__traits(getAttributes)` may only be used for individual functions, not the overload set `%s`", fd.toChars());
-                    deprecationSupplemental(e.loc, "the result of `__traits(getOverloads)` may be used to select the desired function to extract attributes from");
+                    error(e.loc, "`__traits(getAttributes)` may only be used for individual functions, not the overload set `%s`", fd.toChars());
+                    errorSupplemental(e.loc, "the result of `__traits(getOverloads)` may be used to select the desired function to extract attributes from");
                 }
             }
 
-            // @@@DEPRECATION 2.100.2
             if (auto td = s.isTemplateDeclaration())
             {
                 if (td.overnext)
                 {
-                    deprecation(e.loc, "`__traits(getAttributes)` may only be used for individual functions, not the overload set `%s`", td.ident.toChars());
-                    deprecationSupplemental(e.loc, "the result of `__traits(getOverloads)` may be used to select the desired function to extract attributes from");
+                    error(e.loc, "`__traits(getAttributes)` may only be used for individual functions, not the overload set `%s`", td.ident.toChars());
+                    errorSupplemental(e.loc, "the result of `__traits(getOverloads)` may be used to select the desired function to extract attributes from");
                 }
             }
             if (s.isImport())
