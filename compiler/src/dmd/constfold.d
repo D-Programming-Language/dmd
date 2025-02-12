@@ -264,8 +264,88 @@ UnionExp Mul(Loc loc, Type type, Expression e1, Expression e2)
     }
     else
     {
-        emplaceExp!(IntegerExp)(&ue, loc, e1.toInteger() * e2.toInteger(), type);
+        import core.checkedint : muls, mulu;
+
+        bool overflow;
+
+        const n1 = e1.toInteger();
+        const n2 = e2.toInteger();
+
+        void emplaceOverflow()
+        {
+            e2.error("integer overflow: `%s * %s`", e1.toChars(), e2.toChars());
+            emplaceExp!(ErrorExp)(&ue);
+        }
+
+        switch (type.toBasetype().ty)
+        {
+            case Tint8:
+                long b1 = cast(byte)n1, b2 = cast(byte)n2;
+                long b = b1 * b2;
+                if (b >= byte.min && b <= byte.max)
+                    break;
+                emplaceOverflow();
+                return ue;
+
+            case Tuns8:
+                const un = mulu(n1, n2, overflow);
+                if (un <= ubyte.max && !overflow)
+                    break;
+                emplaceOverflow();
+                return ue;
+
+            case Tint16:
+                long s1 = cast(short)n1, s2 = cast(short)n2;
+                long s = s1 * s2;
+                if (s >= short.min && s <= short.max)
+                    break;
+                emplaceOverflow();
+                return ue;
+
+            case Tuns16:
+                const un = mulu(n1, n2, overflow);
+                if (un <= ushort.max && !overflow)
+                    break;
+                emplaceOverflow();
+                return ue;
+
+            case Tint32:
+                muls(cast(int)n1, cast(int)n2, overflow);
+                if (!overflow)
+                    break;
+
+                emplaceOverflow();
+                return ue;
+
+            case Tuns32:
+                const un = mulu(n1, n2, overflow);
+                if (un <= uint.max && !overflow)
+                    break;
+                emplaceOverflow();
+                return ue;
+
+            case Tint64:
+                muls(cast(long)n1, cast(long)n2, overflow);
+                if (!overflow)
+                    break;
+                emplaceOverflow();
+                return ue;
+
+            case Tuns64:
+                mulu(n1, n2, overflow);
+                if (!overflow)
+                    break;
+                emplaceOverflow();
+                return ue;
+
+            default:
+                break;
+        }
+
+        emplaceExp!(IntegerExp)(&ue, loc, n1 * n2, type);
+        return ue;
     }
+
     return ue;
 }
 
@@ -451,14 +531,9 @@ UnionExp Pow(Loc loc, Type type, Expression e1, Expression e2)
         Expression v = uv.exp();
         while (n != 0)
         {
-            if (n & 1)
-            {
-                // v = v * r;
-                uv = Mul(loc, v.type, v, r);
-            }
-            n >>= 1;
-            // r = r * r
-            ur = Mul(loc, r.type, r, r);
+            // v = v * r;
+            uv = Mul(loc, v.type, v, r);
+            --n;
         }
         if (neg)
         {
