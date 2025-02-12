@@ -1,11 +1,10 @@
 /* DISABLED: win32 win64
 REQUIRED_ARGS: -extern-std=c++11
+TRANSFORM_OUTPUT: remove_lines("(Candidates|attribute)")
 TEST_OUTPUT:
 ---
-fail_compilation/cpp_abi_tag2.d(102): Error: constructor `core.attribute.gnuAbiTag.this(string[] tags...)` is not callable using argument types `(string, wstring, dstring)`
-fail_compilation/cpp_abi_tag2.d(102):        cannot pass argument `"b"w` of type `wstring` to parameter `string[] tags...`
-fail_compilation/cpp_abi_tag2.d(105): Error: constructor `core.attribute.gnuAbiTag.this(string[] tags...)` is not callable using argument types `(string, int, double)`
-fail_compilation/cpp_abi_tag2.d(105):        cannot pass argument `2` of type `int` to parameter `string[] tags...`
+fail_compilation/cpp_abi_tag2.d(102): Error: none of the overloads of `this` are callable using argument types `(string, wstring, dstring)`
+fail_compilation/cpp_abi_tag2.d(105): Error: none of the overloads of `this` are callable using argument types `(string, int, double)`
 ---
 */
 
