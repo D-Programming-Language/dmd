@@ -1,5 +1,8 @@
-/* test bitfields for Microsoft C
- * DISABLED: win32 linux freebsd openbsd osx
+/* test bitfields for Digital Mars
+ * Note that this test is for win32 only
+ *
+ *
+ * DISABLED: win32mscoff win64 linux freebsd osx
  * RUN_OUTPUT:
 ---
                 DM |   MS |  P32 |  P64
@@ -21,6 +24,7 @@ S8A =  4 2 ||  4 2 |  4 2 |  2 2 |  2 2
 S8B =  6 2 ||  6 2 |  6 2 |  2 2 |  2 2
 S8C =  8 4 ||  8 4 |  8 4 |  4 4 |  4 4
 S9  =  4 2 ||  4 2 |  4 2 |  4 2 |  4 2
+S10 =  1 1 ||  0 0 |  * * |  0 1 |  0 1
 S11 =  1 1 ||  0 0 |  4 1 |  0 1 |  0 1
 S12 =  4 4 ||  4 4 |  4 4 |  4 4 |  4 4
 S13 =  8 4 ||  8 4 |  8 4 |  8 4 |  8 4
@@ -30,21 +34,21 @@ S16 =  4 4 ||  0 0 |  4 4 |  4 1 |  4 1
 S17 =  4 4 ||  4 4 |  4 4 |  4 4 |  4 4
 S18 =  2 1 ||  2 1 |  2 1 |  5 1 |  9 1
 A0  = 16 8 || 16 8 | 16 8 | 12 4 | 16 8
-A1  = 12 4 ||  * * | 12 4
-A2  = 12 4 ||  * * | 12 4
-A3  = 16 4 ||  * * | 16 4
-A4  = 12 4 ||  * * | 12 4
-A5  =  2 1 ||  * * |  2 1
-A6  =  4 2 ||  * * |  4 2
-A7  = 16 4 ||  * * | 16 4
-A8  = 12 4 ||  * * | 12 4
-A9  = 32 8 ||  * * | 32 8
-A10 =  4 2 ||  * * |  4 2
-A11 = 16 4 ||  * * | 16 4
+A1  = 12 4 || 12 4 | 12 4 | 12 4 | 12 4
+A2  = 12 4 || 12 4 | 12 4 | 12 4 | 12 4
+A3  = 16 4 || 16 4 | 16 4 | 16 4 | 16 4
+A4  = 12 4 || 12 4 | 12 4 |  8 4 |  8 4
+A5  =  2 1 ||  2 1 |  2 1 |  2 1 |  2 1
+A6  =  4 2 ||  4 2 |  4 2 |  2 2 |  2 2
+A7  = 16 4 || 16 4 | 16 4 | 12 4 | 16 8
+A8  = 12 4 || 12 4 | 12 4 |  8 4 |  8 8
+A9  = 32 8 || 32 8 | 32 8 | 16 4 | 16 8
+A10 =  4 2 ||  4 2 |  4 2 |  2 2 |  2 2
+A11 = 16 4 || 16 4 | 16 4 | 12 4 | 12 4
 S9 = x30200
 S14 = x300000201
 S15 = x201
-S18 = 1
+S18 = 1 should be 4
 A0 = x1
 ---
  */
@@ -73,13 +77,13 @@ struct S8A { ubyte b:1; short c:2; };            //
 struct S8B { ubyte a; short b:1; ubyte c:2; };   //
 struct S8C { ubyte a; int b:1; };                //
 struct S9  { ubyte a; ubyte b:2; short c:9; };   //
-//struct S10 { };                                //
-struct S11 { int :0; };                          // differs from C in that C sizeof is 4
+struct S10 { };                                  // sizeof differs from C treatment
+struct S11 { int :0; };                          // sizeof differs from C treatment
 struct S12 { int :0; int x; };                   //
 struct S13 { uint x:12; uint x1:1; uint x2:1; uint x3:1; uint x4:1; int w; }; //
 struct S14 { ubyte a; ubyte b:4; int c:30; };    //
 struct S15 { ubyte a; ubyte b:2; int c:9; };     //
-struct S16 { int :32; };                         //
+struct S16 { int :32; };                         // sizeof differs from C treatment
 struct S17 { int a:32; };                        //
 struct S18 { ubyte a; long :0; ubyte b; };       //
 struct A0  { int a; long b:34, c:4; };           //
@@ -127,7 +131,7 @@ int main()
     printf("S8B = %2d %d ||  6 2 |  6 2 |  2 2 |  2 2\n", cast(int)S8B.sizeof, cast(int)S8B.alignof);
     printf("S8C = %2d %d ||  8 4 |  8 4 |  4 4 |  4 4\n", cast(int)S8C.sizeof, cast(int)S8C.alignof);
     printf("S9  = %2d %d ||  4 2 |  4 2 |  4 2 |  4 2\n", cast(int)S9.sizeof,  cast(int)S9.alignof);
-//    printf("S10 = %2d %d ||  0 0 |  * * |  0 1 |  0 1\n", cast(int)S10.sizeof, cast(int)S10.alignof); // MS doesn't compile
+    printf("S10 = %2d %d ||  0 0 |  * * |  0 1 |  0 1\n", cast(int)S10.sizeof, cast(int)S10.alignof); // MS doesn't compile
     printf("S11 = %2d %d ||  0 0 |  4 1 |  0 1 |  0 1\n", cast(int)S11.sizeof, cast(int)S11.alignof);
     printf("S12 = %2d %d ||  4 4 |  4 4 |  4 4 |  4 4\n", cast(int)S12.sizeof, cast(int)S12.alignof);
     printf("S13 = %2d %d ||  8 4 |  8 4 |  8 4 |  8 4\n", cast(int)S13.sizeof, cast(int)S13.alignof);
@@ -137,21 +141,21 @@ int main()
     printf("S17 = %2d %d ||  4 4 |  4 4 |  4 4 |  4 4\n", cast(int)S17.sizeof, cast(int)S17.alignof);
     printf("S18 = %2d %d ||  2 1 |  2 1 |  5 1 |  9 1\n", cast(int)S18.sizeof, cast(int)S18.alignof);
     printf("A0  = %2d %d || 16 8 | 16 8 | 12 4 | 16 8\n", cast(int)A0.sizeof,  cast(int)A0.alignof);
-    printf("A1  = %2d %d ||  * * | 12 4\n", cast(int)A1.sizeof,  cast(int)A1.alignof);
-    printf("A2  = %2d %d ||  * * | 12 4\n", cast(int)A2.sizeof,  cast(int)A2.alignof);
-    printf("A3  = %2d %d ||  * * | 16 4\n", cast(int)A3.sizeof,  cast(int)A3.alignof);
-    printf("A4  = %2d %d ||  * * | 12 4\n", cast(int)A4.sizeof,  cast(int)A4.alignof);
-    printf("A5  = %2d %d ||  * * |  2 1\n", cast(int)A5.sizeof,  cast(int)A5.alignof);
-    printf("A6  = %2d %d ||  * * |  4 2\n", cast(int)A6.sizeof,  cast(int)A6.alignof);
-    printf("A7  = %2d %d ||  * * | 16 4\n", cast(int)A7.sizeof,  cast(int)A7.alignof);
-    printf("A8  = %2d %d ||  * * | 12 4\n", cast(int)A8.sizeof,  cast(int)A8.alignof);
-    printf("A9  = %2d %d ||  * * | 32 8\n", cast(int)A9.sizeof,  cast(int)A9.alignof);
-    printf("A10 = %2d %d ||  * * |  4 2\n", cast(int)A10.sizeof, cast(int)A10.alignof);
-    printf("A11 = %2d %d ||  * * | 16 4\n", cast(int)A11.sizeof, cast(int)A11.alignof);
+    printf("A1  = %2d %d || 12 4 | 12 4 | 12 4 | 12 4\n", cast(int)A1.sizeof,  cast(int)A1.alignof);
+    printf("A2  = %2d %d || 12 4 | 12 4 | 12 4 | 12 4\n", cast(int)A2.sizeof,  cast(int)A2.alignof);
+    printf("A3  = %2d %d || 16 4 | 16 4 | 16 4 | 16 4\n", cast(int)A3.sizeof,  cast(int)A3.alignof);
+    printf("A4  = %2d %d || 12 4 | 12 4 |  8 4 |  8 4\n", cast(int)A4.sizeof,  cast(int)A4.alignof);
+    printf("A5  = %2d %d ||  2 1 |  2 1 |  2 1 |  2 1\n", cast(int)A5.sizeof,  cast(int)A5.alignof);
+    printf("A6  = %2d %d ||  4 2 |  4 2 |  2 2 |  2 2\n", cast(int)A6.sizeof,  cast(int)A6.alignof);
+    printf("A7  = %2d %d || 16 4 | 16 4 | 12 4 | 16 8\n", cast(int)A7.sizeof,  cast(int)A7.alignof);
+    printf("A8  = %2d %d || 12 4 | 12 4 |  8 4 |  8 8\n", cast(int)A8.sizeof,  cast(int)A8.alignof);
+    printf("A9  = %2d %d || 32 8 | 32 8 | 16 4 | 16 8\n", cast(int)A9.sizeof,  cast(int)A9.alignof);
+    printf("A10 = %2d %d ||  4 2 |  4 2 |  2 2 |  2 2\n", cast(int)A10.sizeof, cast(int)A10.alignof);
+    printf("A11 = %2d %d || 16 4 | 16 4 | 12 4 | 12 4\n", cast(int)A11.sizeof, cast(int)A11.alignof);
 
     {
         S9 s;
-	uint x;
+        uint x;
         *cast(uint *)&s = 0;
         s.b = 2; s.c = 3;
         x = *cast(uint *)&s;
@@ -169,7 +173,7 @@ int main()
     }
     {
         S15 s = { 1,2,3 };
-	uint x;
+        uint x;
         *cast(uint *)&s = 0;
         s.a = 1; s.b = 2; s.c = 3;
         x = *cast(uint *)&s;
@@ -177,11 +181,11 @@ int main()
     }
     {
         S18 s;
-        printf("S18 = %d\n", cast(int)(&s.b - &s.a));
+        printf("S18 = %d should be %d\n", cast(int)(&s.b - &s.a), is64bit() ? 8 : 4);
     }
     {
         A0 s;
-	long x;
+        long x;
         *cast(long *)&s = 0;
         s.a = 1; s.b = 15;
         x = *cast(long *)&s;

@@ -1,4 +1,4 @@
-/* REQUIRED_ARGS: -preview=bitfields
+/*
  * TEST_OUTPUT:
 ---
 fail_compilation/biterrors5.d(23): Error: bitfield symbol expected not struct `biterrors5.S`
