@@ -3946,6 +3946,7 @@ struct ASTBase
             incomplete      = 0x0200, // return type or default arguments removed
             inoutParam      = 0x0400, // inout on the parameters
             inoutQual       = 0x0800, // inout on the qualifier
+            isCtonly        = 0x1000, // is @ctonly
         }
 
         LINK linkage;               // calling convention
@@ -3987,6 +3988,9 @@ struct ASTBase
                 this.trust = TRUST.system;
             else if (stc & STC.trusted)
                 this.trust = TRUST.trusted;
+
+            if (stc & STC.ctonly)
+                this.isCtonly = true;
         }
 
         override TypeFunction syntaxCopy()
@@ -4006,6 +4010,7 @@ struct ASTBase
             t.isScopeInferred = isScopeInferred;
             t.isInOutParam = isInOutParam;
             t.isInOutQual = isInOutQual;
+            t.isCtonly = isCtonly;
             t.trust = trust;
             t.fargs = fargs;
             return t;
@@ -4158,6 +4163,18 @@ struct ASTBase
         bool iswild() const pure nothrow @safe @nogc
         {
             return (funcFlags & (FunctionFlag.inoutParam | FunctionFlag.inoutQual)) != 0;
+        }
+
+        /// set or get if the function is @ctonly
+        bool isCtonly() const pure nothrow @safe @nogc
+        {
+            return (funcFlags & FunctionFlag.isCtonly) != 0;
+        }
+        /// ditto
+        void isCtonly(bool v) pure nothrow @safe @nogc
+        {
+            if (v) funcFlags |= FunctionFlag.isCtonly;
+            else funcFlags &= ~FunctionFlag.isCtonly;
         }
 
         override void accept(Visitor v)
@@ -6917,6 +6934,7 @@ struct ASTBase
             SCstring(STC.disable, "@disable"),
             SCstring(STC.future, "@__future"),
             SCstring(STC.local, "__local"),
+            SCstring(STC.ctonly, "@ctonly"),
         ];
         foreach (ref entry; table)
         {

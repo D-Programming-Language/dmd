@@ -9570,6 +9570,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                (ident == Id.live)     ? STC.live     :
                (ident == Id.future)   ? STC.future   :
                (ident == Id.disable)  ? STC.disable  :
+               (ident == Id.ctonly)   ? STC.ctonly   :
                0;
     }
 

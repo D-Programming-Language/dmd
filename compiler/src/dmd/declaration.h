@@ -109,9 +109,10 @@ namespace dmd
     #define STClive               0x10000000000000ULL    /// function `@live` attribute
     #define STCregister           0x20000000000000ULL    /// `register` storage class (ImportC)
     #define STCvolatile           0x40000000000000ULL    /// destined for volatile in the back end
+    #define STCctonly             0x80000000000000ULL    /// function that is only called during compile time
 
 #define STC_TYPECTOR    (STCconst | STCimmutable | STCshared | STCwild)
-#define STC_FUNCATTR    (STCref | STCnothrow | STCnogc | STCpure | STCproperty | STCsafe | STCtrusted | STCsystem)
+#define STC_FUNCATTR    (STCref | STCnothrow | STCnogc | STCpure | STCproperty | STCsafe | STCtrusted | STCsystem | STCctonly)
 
 /**************************************************************/
 

@@ -119,6 +119,7 @@ enum STC : ulong  // transfer changes to declaration.h
     live                = 0x10_0000_0000_0000,   /// function `@live` attribute
     register            = 0x20_0000_0000_0000,   /// `register` storage class (ImportC)
     volatile_           = 0x40_0000_0000_0000,   /// destined for volatile in the back end
+    ctonly              = 0x80_0000_0000_0000,   /// function that is only called during compile time
 
     safeGroup = STC.safe | STC.trusted | STC.system,
     IOR  = STC.constscoperef | STC.in_ | STC.ref_ | STC.out_,
@@ -132,7 +133,7 @@ enum STC : ulong  // transfer changes to declaration.h
         (STC.auto_ | STC.scope_ | STC.static_ | STC.extern_ | STC.const_ | STC.final_ | STC.abstract_ | STC.synchronized_ |
          STC.deprecated_ | STC.future | STC.override_ | STC.lazy_ | STC.alias_ | STC.out_ | STC.in_ | STC.manifest |
          STC.immutable_ | STC.shared_ | STC.wild | STC.nothrow_ | STC.nogc | STC.pure_ | STC.ref_ | STC.return_ | STC.tls | STC.gshared |
-         STC.property | STC.safeGroup | STC.disable | STC.local | STC.live),
+         STC.property | STC.safeGroup | STC.disable | STC.local | STC.live | STC.ctonly),
 
     /* These storage classes "flow through" to the inner scope of a Dsymbol
      */

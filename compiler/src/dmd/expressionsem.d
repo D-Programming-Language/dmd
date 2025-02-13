@@ -2370,6 +2370,62 @@ private bool checkNogc(FuncDeclaration f, ref Loc loc, Scope* sc)
     return true;
 }
 
+/*********************************************
+ * Calling function f.
+ * Check the @ctonly-ness, i.e. we can only call @ctonly functions
+ * from either other @ctonly functions or ctfe.
+ * Returns true if error occurs.
+ */
+private bool checkCtonly(FuncDeclaration f, ref Loc loc, Scope* sc, bool fIsAliasParam)
+{
+    if (sc.ctfe) return false;
+    auto fTy = f.type.toTypeFunction();
+    if (!fTy) {
+        warning(loc, "callee %s is not a function?", f.toPrettyChars());
+        return false;
+    }
+    if (!fTy.isCtonly()) return false;
+    auto caller = sc.func;
+    if (!caller) {
+        error(loc, "cannot call @ctonly function %s from non-CTFE context", f.toPrettyChars());
+        return true;
+    }
+    auto callerTy = caller.type.toTypeFunction();
+    if (!callerTy) {
+        warning(loc, "caller %s is not a function?", caller.toPrettyChars());
+        return false;
+    }
+    if (callerTy.isCtonly()) return false;
+    if (fIsAliasParam && caller.isInstantiated()) {
+        //message(loc, "restricting %s to be @ctonly, since it calls @ctonly function %s it got via an alias parameter",
+        //        caller.toPrettyChars(), f.toPrettyChars());
+        callerTy.isCtonly = true;
+        callerTy.isCtonlyInferred = true;
+        callerTy.ctOnlyInferReason = f;
+        return false;
+    }
+
+    if (fTy.isCtonlyInferred()) {
+        if (caller.isInstantiated()) {
+            // Propagate inferred @ctonly to all templated functions.
+            // This is not great: should instead check that the original infer reason
+            // is in template parameters, or in parameters of parameters and so on...
+            //message(loc, "propagating @ctonly to %s, since it calls function %s that was inferred to be @ctonly",
+            //        caller.toPrettyChars(), f.toPrettyChars());
+            callerTy.isCtonly = true;
+            callerTy.isCtonlyInferred = true;
+            callerTy.ctOnlyInferReason = f;
+            return false;
+        }
+    }
+    error(loc, "cannot call @ctonly function %s from non-@ctonly function %s", f.toPrettyChars(), sc.func.toPrettyChars());
+    if (f.type.toTypeFunction().isCtonlyInferred()) {
+        errorSupplemental(loc, "%s was inferred to be @ctonly because it calls %s\n",
+                          f.toPrettyChars(), f.type.toTypeFunction().ctOnlyInferReason.toPrettyChars());
+    }
+    return true;
+}
+
 /********************************************
  * Check that the postblit of `t` isn't @disabled and has the right
  * function attributes for this scope.
@@ -5873,6 +5929,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             printf("CallExp::semantic() %s\n", exp.toChars());
         }
 
+        bool fIsAliasParam = false;
         Objects* tiargs = null; // initial list of template arguments
         Expression ethis = null;
         Type tthis = null;
@@ -5924,6 +5981,18 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             return;
         }
 
+        // That's a hacky way to check if exp.e1 is an alias template parameter.
+        // I found that such aliases have parent == null, but I'm not sure if
+        // this guarantees that it's a template parameter.
+        if (IdentifierExp ie = exp.e1.isIdentifierExp()) {
+            Dsymbol parentSc;
+            Dsymbol s = sc.search(ie.loc, ie.ident, parentSc);
+            if (s) {
+                if (auto ae = s.isAliasDeclaration()) {
+                    if (!ae.parent) fIsAliasParam = true;
+                }
+            }
+        }
         /* This recognizes:
          *  foo!(tiargs)(funcargs)
          */
@@ -6416,7 +6485,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             }
 
             if (!exp.ignoreAttributes)
-                checkFunctionAttributes(exp, sc, exp.f);
+                checkFunctionAttributes(exp, sc, exp.f, fIsAliasParam);
 
             // Cut-down version of checkAccess() that doesn't use the "most visible" version of exp.f.
             // We've already selected an overload here.
@@ -6555,7 +6624,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             if (!exp.f || exp.f.errors)
                 return setError();
 
-            checkFunctionAttributes(exp, sc, exp.f);
+            checkFunctionAttributes(exp, sc, exp.f, fIsAliasParam);
             if (!checkSymbolAccess(sc, exp.f))
             {
                 error(exp.loc, "%s `%s` is not accessible from module `%s`",
@@ -6819,7 +6888,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
                 }
             }
 
-            checkFunctionAttributes(exp, sc, exp.f);
+            checkFunctionAttributes(exp, sc, exp.f, fIsAliasParam);
             checkAccess(exp.loc, sc, null, exp.f);
             if (exp.f.checkNestedFuncReference(sc, exp.loc))
                 return setError();
@@ -15567,6 +15636,13 @@ private Expression toLvalueImpl(Expression _this, Scope* sc, const(char)* action
             error(_this.loc, "cannot %s operator `$`", action);
             return ErrorExp.get();
         }
+        if (auto fd = _this.var.isFuncDeclaration()) {
+            auto fty = fd.type.toTypeFunction();
+            if (fty.isCtonly()) {
+                error(_this.loc, "cannot %s @ctonly function `%s`", action, var.toChars());
+                return ErrorExp.get();
+            }
+        }
         return _this;
     }
 
@@ -16161,13 +16237,14 @@ bool checkAddressable(Expression e, Scope* sc)
  *  f   = function to be checked
  * Returns: `true` if error occur.
  */
-private bool checkFunctionAttributes(Expression exp, Scope* sc, FuncDeclaration f)
+private bool checkFunctionAttributes(Expression exp, Scope* sc, FuncDeclaration f, bool fIsAliasParam = false)
 {
     bool error = f.checkDisabled(exp.loc, sc);
     error |= f.checkDeprecated(exp.loc, sc);
     error |= f.checkPurity(exp.loc, sc);
     error |= f.checkSafety(exp.loc, sc);
     error |= f.checkNogc(exp.loc, sc);
+    error |= f.checkCtonly(exp.loc, sc, fIsAliasParam);
     return error;
 }
 

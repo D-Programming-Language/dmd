@@ -572,6 +572,8 @@ public:
     bool isInOutQual() const;
     void isInOutQual(bool v);
     bool iswild() const;
+    bool isCtonly() const;
+    void isCtonly(bool v);
 
     void accept(Visitor *v) override { v->visit(this); }
 };

@@ -3307,6 +3307,7 @@ string stcToString(ref StorageClass stc) @safe
         SCstring(STC.disable, "@disable"),
         SCstring(STC.future, "@__future"),
         SCstring(STC.local, "__local"),
+        SCstring(STC.ctonly, "@ctonly"),
     ];
     foreach (ref entry; table)
     {
