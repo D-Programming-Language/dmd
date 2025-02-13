@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>druntime</RootNamespace>
+    <WindowsTargetPlatformVersion>10</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <DCompiler>DMD</DCompiler>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup>
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup>
+    <IsDebug>false</IsDebug>
+    <IsDebug Condition="'$(Configuration)'=='Debug'">true</IsDebug>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LinkIncremental>true</LinkIncremental>
+    <IntDir>..\..\..\generated\Windows\$(Configuration)\$(PlatformName)\</IntDir>
+    <OutDir>..\..\..\generated\Windows\$(Configuration)\$(PlatformName)\</OutDir>
+    <LinkIncremental Condition="'$(Configuration)'=='Release'">false</LinkIncremental>
+    <CCModel Condition="'$(Platform)'=='x64'">x64</CCModel>
+    <CCModel Condition="'$(Platform)'=='Win32'">x86</CCModel>
+    <DMDModel Condition="'$(Platform)'=='x64'">64</DMDModel>
+    <DMDModel Condition="'$(Platform)'=='Win32'">32mscoff</DMDModel>
+    <DMDConfig Condition="$(IsDebug)">Debug</DMDConfig>
+    <DMDConfig Condition="!$(IsDebug)">Release</DMDConfig>
+    <TargetName>druntime$(DMDModel)</TargetName>
+    <DMDBinDir>..\..\..\generated\Windows\$(Configuration)\$(PlatformName)\</DMDBinDir>
+    <DRuntimeSrcDir Condition="Exists('src/object.d')">src</DRuntimeSrcDir>
+    <DRuntimeSrcDir Condition="'$(DRuntimeSrcDir)' == ''">..\..\..\druntime\src</DRuntimeSrcDir>
+    <MakeTarget>
+    </MakeTarget>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)'!='Release'">MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <DCompile>
+      <CompilationModel>Project</CompilationModel>
+      <ImportPaths>
+      </ImportPaths>
+      <CRuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</CRuntimeLibrary>
+      <CRuntimeLibrary Condition="'$(Configuration)'!='Release'">MultiThreadedDebug</CRuntimeLibrary>
+      <AdditionalOptions>-lib -preview=shortenedMethods -preview=fieldwise
+ -preview=dtorfields -preview=dip1000</AdditionalOptions>
+      <ShowCommandLine>true</ShowCommandLine>
+      <PreviewShortenedMethods Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </PreviewShortenedMethods>
+    </DCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <DCompile>
+      <Optimizer>true</Optimizer>
+      <Inliner>true</Inliner>
+      <DebugCode>Release</DebugCode>
+    </DCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\vcbuild\dmd.vcxproj">
+      <Project>{c4da4faf-a928-4230-8353-e80c76f223e0}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(DRuntimeSrcDir)\__importc_builtins.di" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(DRuntimeSrcDir)\importc.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <DCompile Include="$(DRuntimeSrcDir)\core\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\gc\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\internal\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\internal\array\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\internal\container\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\internal\gc\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\internal\gc\impl\proto\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\internal\util\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\stdc\*d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\sync\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\sys\windows\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\sys\windows\stdc\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\thread\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\core\thread\fiber\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\object.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\rt\*.d" />
+    <DCompile Include="$(DRuntimeSrcDir)\rt\util\*.d" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

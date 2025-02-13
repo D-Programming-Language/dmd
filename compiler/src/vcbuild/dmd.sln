@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dmd", "dmd.vcxproj", "{C4DA4FAF-A928-4230-8353-E80C76F223E0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "druntime", "druntime.vcxproj", "{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,18 @@ Global
 		{C4DA4FAF-A928-4230-8353-E80C76F223E0}.RelWithAsserts|Win32.Build.0 = RelWithAsserts|Win32
 		{C4DA4FAF-A928-4230-8353-E80C76F223E0}.RelWithAsserts|x64.ActiveCfg = RelWithAsserts|x64
 		{C4DA4FAF-A928-4230-8353-E80C76F223E0}.RelWithAsserts|x64.Build.0 = RelWithAsserts|x64
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Debug|Win32.ActiveCfg = Debug|Win32
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Debug|Win32.Build.0 = Debug|Win32
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Debug|x64.ActiveCfg = Debug|x64
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Debug|x64.Build.0 = Debug|x64
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Release|Win32.ActiveCfg = Release|Win32
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Release|Win32.Build.0 = Release|Win32
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Release|x64.ActiveCfg = Release|x64
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.Release|x64.Build.0 = Release|x64
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.RelWithAsserts|Win32.ActiveCfg = Release|Win32
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.RelWithAsserts|Win32.Build.0 = Release|Win32
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.RelWithAsserts|x64.ActiveCfg = Release|x64
+		{987BD84D-D5D9-4F39-B100-54FB4ADAEF89}.RelWithAsserts|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
