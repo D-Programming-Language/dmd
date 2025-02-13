@@ -5419,7 +5419,7 @@ void undefinedWrite(T)(ref T var, T value) nothrow
 private void adjustAttrs(ref uint attrs, const TypeInfo ti) nothrow
 {
     bool hasContext = ti !is null;
-    if((attrs & BlkAttr.FINALIZE) && hasContext && typeid(ti) is typeid(TypeInfo_Struct))
+    if((attrs & BlkAttr.FINALIZE) && hasContext && (typeid(ti) !is typeid(TypeInfo_Class)))
         attrs |= BlkAttr.STRUCTFINAL;
     else
         // STRUCTFINAL now just means "has a context pointer added to the block"

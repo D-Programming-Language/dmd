@@ -611,12 +611,28 @@ extern (C) int rt_hasFinalizerInSegment(void* p, size_t size, TypeInfo typeInfo,
     if (!p)
         return false;
 
+    bool checkStructTI(TypeInfo ti)
+    {
+        if (typeid(ti) is typeid(TypeInfo_Struct))
+        {
+            auto sti = cast(TypeInfo_Struct)cast(void*)ti;
+            return cast(size_t)(cast(void*)sti.xdtor - segment.ptr) < segment.length;
+        }
+        if (typeid(ti) is typeid(TypeInfo_StaticArray))
+            return checkStructTI(ti.next);
+        return false;
+    }
+
     if (typeInfo !is null)
     {
-        assert(typeid(typeInfo) is typeid(TypeInfo_Struct));
-
-        auto ti = cast(TypeInfo_Struct)cast(void*)typeInfo;
-        return cast(size_t)(cast(void*)ti.xdtor - segment.ptr) < segment.length;
+        if (typeid(typeInfo) is typeid(TypeInfo_AssociativeArray))
+        {
+            // this is an AA element. It's in here because we need to run a
+            // dtor on either the key or the value.
+            auto tiaa = cast(TypeInfo_AssociativeArray)cast(void*)typeInfo;
+            return checkStructTI(unqualify(tiaa.key)) || checkStructTI(unqualify(tiaa.value));
+        }
+        return checkStructTI(typeInfo);
     }
 
     // otherwise class
@@ -721,22 +737,30 @@ extern (C) void rt_finalizeFromGC(void* p, size_t size, uint attr, TypeInfo type
         return;
     }
 
-    assert(typeid(typeInfo) is typeid(TypeInfo_Struct));
-
-    auto si = cast(TypeInfo_Struct)cast(void*)typeInfo;
-
     try
     {
-        if (attr & BlkAttr.APPENDABLE)
+        auto tti = typeid(typeInfo);
+
+        if (tti is typeid(TypeInfo_AssociativeArray))
         {
-            finalize_array(p, size, si);
+            import rt.aaA : finalizeEntry;
+            finalizeEntry(p, cast(TypeInfo_AssociativeArray)cast(void*)typeInfo);
         }
-        else
-            finalize_struct(p, si); // struct
+        else if (tti is typeid(TypeInfo_Struct))
+        {
+            auto si = cast(TypeInfo_Struct)cast(void*)typeInfo;
+
+            if (attr & BlkAttr.APPENDABLE)
+            {
+                finalize_array(p, size, si);
+            }
+            else
+                finalize_struct(p, si); // struct
+        }
     }
     catch (Exception e)
     {
-        onFinalizeError(si, e);
+        onFinalizeError(typeInfo, e);
     }
 }
 
@@ -1587,16 +1611,13 @@ deprecated unittest
     GC.free(blkinf.base);
 
     // associative arrays
-    import rt.aaA : entryDtor;
-    // throw away all existing AA entries with dtor
-    GC.runFinalizers((cast(char*)&entryDtor)[0..1]);
 
     S1[int] aa1;
     aa1[0] = S1(0);
     aa1[1] = S1(1);
     dtorCount = 0;
     aa1 = null;
-    GC.runFinalizers((cast(char*)&entryDtor)[0..1]);
+    GC.runFinalizers((cast(char*)(typeid(S1).xdtor))[0..1]);
     assert(dtorCount == 2);
 
     int[S1] aa2;
@@ -1605,7 +1626,7 @@ deprecated unittest
     aa2[S1(2)] = 2;
     dtorCount = 0;
     aa2 = null;
-    GC.runFinalizers((cast(char*)&entryDtor)[0..1]);
+    GC.runFinalizers((cast(char*)(typeid(S1).xdtor))[0..1]);
     assert(dtorCount == 3);
 
     S1[2][int] aa3;
@@ -1613,7 +1634,7 @@ deprecated unittest
     aa3[1] = [S1(1),S1(3)];
     dtorCount = 0;
     aa3 = null;
-    GC.runFinalizers((cast(char*)&entryDtor)[0..1]);
+    GC.runFinalizers((cast(char*)(typeid(S1).xdtor))[0..1]);
     assert(dtorCount == 4);
 }
 

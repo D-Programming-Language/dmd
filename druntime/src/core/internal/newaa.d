@@ -44,7 +44,7 @@ struct Impl
     Bucket[] buckets;
     uint used;
     uint deleted;
-    TypeInfo_Struct entryTI;
+    const TypeInfo entryTI;
     uint firstUsed;
     immutable uint keysz;
     immutable uint valsz;
@@ -57,6 +57,7 @@ struct Impl
         none = 0x0,
         keyHasPostblit = 0x1,
         hasPointers = 0x2,
+        hasDtors = 0x04,
     }
 }
 
@@ -147,6 +148,8 @@ AAShell makeAA(K, V)(V[K] src) @trusted
             flags |= flags.keyHasPostblit;
         static if (hasIndirections!E)
             flags |= flags.hasPointers;
+        static if (hasElaborateDestructor!E)
+            flags |= flags.hasDtors;
         return flags;
     } ();
     // return the new implementation
