@@ -7,6 +7,7 @@ TEST_OUTPUT:
 
 import core.stdc.math : isnan, signbit;
 import core.stdc.stdio;
+import core.stdc.complex;
 
 template AliasSeq(T...) { alias T AliasSeq; }
 
@@ -375,6 +376,24 @@ void test7806()
 void test7976() {
     creal[] a = new creal[2];
     auto b = a[0] = a[1];
+}
+
+/***************************************/
+// https://issues.dlang.org/show_bug.cgi?id=20688
+
+void test20688()
+{
+    version (FreeBSD)
+    {
+        // doesn't have cpowf()
+    }
+    else
+    {
+        cdouble r = cpowf(2. + 0i, 2. + 0i);
+        assert(cast(double)creal(r) == 4.0);
+        assert(cast(double)cimag(r) == 0.0);
+        printf("%f+%fi\n", cast(double)creal(r), cast(double)cimag(r));
+    }
 }
 
 /***************************************/
@@ -1534,6 +1553,7 @@ int main(char[][] args)
     test10677();
     test7806();
     test7976();
+    test20688();
     test15();
     test16();
     test17();
