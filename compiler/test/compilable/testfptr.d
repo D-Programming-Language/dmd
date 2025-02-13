@@ -107,16 +107,11 @@ void bug3797()
     static assert(!is(typeof( purefunc = nonpurefunc )));
     static assert( is(typeof( nonpurefunc = purefunc )));
 
-    // Cannot convert parameter storage classes (except const to in and in to const)
-
-    void function(const(int)) constfunc;
+    // Cannot convert parameter storage classes
     void function(in int) infunc;
     void function(out int) outfunc;
     void function(ref int) reffunc;
     void function(lazy int) lazyfunc;
-
-    static assert(is(typeof( infunc = constfunc )));
-    static assert(is(typeof( constfunc = infunc )));
 
     static assert(!is(typeof( infunc = outfunc )));
     static assert(!is(typeof( infunc = reffunc )));
@@ -250,16 +245,11 @@ void bug3797dg()
     static assert(!is(typeof( purefunc = nonpurefunc )));
     static assert( is(typeof( nonpurefunc = purefunc )));
 
-    // Cannot convert parameter storage classes (except const to in and in to const)
-
-    void delegate(const(int)) constfunc;
+    // Cannot convert parameter storage classes
     void delegate(in int) infunc;
     void delegate(out int) outfunc;
     void delegate(ref int) reffunc;
     void delegate(lazy int) lazyfunc;
-
-    static assert(is(typeof( infunc = constfunc )));
-    static assert(is(typeof( constfunc = infunc )));
 
     static assert(!is(typeof( infunc = outfunc )));
     static assert(!is(typeof( infunc = reffunc )));

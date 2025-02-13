@@ -2,13 +2,13 @@
 TEST_OUTPUT:
 ---
 fail_compilation/fail183.d(17): Error: attribute `const` is redundant with previously-applied `in`
-fail_compilation/fail183.d(18): Error: attribute `scope` cannot be applied with `in`, use `-preview=in` instead
+fail_compilation/fail183.d(18): Error: attribute `scope` is redundant with previously-applied `in`
 fail_compilation/fail183.d(19): Error: attribute `const` is redundant with previously-applied `in`
-fail_compilation/fail183.d(19): Error: attribute `scope` cannot be applied with `in`, use `-preview=in` instead
-fail_compilation/fail183.d(20): Error: attribute `scope` cannot be applied with `in`, use `-preview=in` instead
+fail_compilation/fail183.d(19): Error: attribute `scope` is redundant with previously-applied `in`
+fail_compilation/fail183.d(20): Error: attribute `scope` is redundant with previously-applied `in`
 fail_compilation/fail183.d(20): Error: attribute `const` is redundant with previously-applied `in`
 fail_compilation/fail183.d(22): Error: attribute `in` cannot be added after `const`: remove `const`
-fail_compilation/fail183.d(23): Error: attribute `in` cannot be added after `scope`: remove `scope` and use `-preview=in`
+fail_compilation/fail183.d(23): Error: attribute `in` cannot be added after `scope`: remove `scope`
 fail_compilation/fail183.d(24): Error: attribute `in` cannot be added after `const`: remove `const`
 fail_compilation/fail183.d(25): Error: attribute `in` cannot be added after `const`: remove `const`
 ---
