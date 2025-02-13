@@ -186,3 +186,6 @@ typedef unsigned long long __uint64_t;
 #if __APPLE__
 #undef __SIZEOF_INT128__
 #endif
+
+// so that `size_t`, `NULL` and friends are always defined.
+#include <stddef.h>
