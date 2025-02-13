@@ -382,13 +382,14 @@ private struct TimeTraceProfiler
 
         void writeLocation(Loc loc)
         {
-            if (loc.filename())
+            SourceLoc sl = SourceLoc(loc);
+            if (sl.filename.length > 0)
             {
-                writeEscapeJSONString(buf, loc.filename().toDString());
-                if (loc.linnum())
+                writeEscapeJSONString(buf, sl.filename);
+                if (sl.line)
                 {
                     buf.writeByte(':');
-                    buf.print(loc.linnum());
+                    buf.print(sl.line);
                 }
             }
             else

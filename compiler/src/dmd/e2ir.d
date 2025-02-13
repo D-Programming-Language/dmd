@@ -6953,10 +6953,11 @@ elem* buildArrayIndexError(ref IRState irs, Loc loc, elem* index, elem* length) 
 /// Returns: elem representing a C-string (char*) to the filename
 elem* locToFileElem(const ref IRState irs, Loc loc) {
     elem* efile;
-    if (loc.filename)
+
+    if (auto fname = loc.filename)
     {
-        const len = strlen(loc.filename);
-        Symbol* s = toStringSymbol(loc.filename, len, 1);
+        const len = strlen(fname);
+        Symbol* s = toStringSymbol(fname, len, 1);
         efile = el_ptr(s);
     }
     else
