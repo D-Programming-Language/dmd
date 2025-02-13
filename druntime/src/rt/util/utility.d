@@ -25,20 +25,3 @@ package(rt) void safeAssert(
     import core.internal.abort;
     condition || abort(msg, file, line);
 }
-
-// @@@DEPRECATED_2.105@@@
-// Remove this when complex types have been removed from the language.
-package(rt)
-{
-    private struct _Complex(T) { T re; T im; }
-
-    enum __c_complex_float : _Complex!float;
-    enum __c_complex_double : _Complex!double;
-    enum __c_complex_real : _Complex!real;  // This is why we don't use stdc.config
-
-    alias d_cfloat = __c_complex_float;
-    alias d_cdouble = __c_complex_double;
-    alias d_creal = __c_complex_real;
-
-    enum isComplex(T) = is(T == d_cfloat) || is(T == d_cdouble) || is(T == d_creal);
-}

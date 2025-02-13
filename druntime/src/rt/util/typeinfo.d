@@ -7,7 +7,6 @@
  * Source: $(DRUNTIMESRC rt/util/_typeinfo.d)
  */
 module rt.util.typeinfo;
-import rt.util.utility : d_cfloat, d_cdouble, d_creal, isComplex;
 static import core.internal.hash;
 
 // Three-way compare for integrals: negative if `lhs < rhs`, positive if `lhs > rhs`, 0 otherwise.
@@ -32,16 +31,6 @@ if (is(T == float) || is(T == double) || is(T == real))
         return d1 == d1; // 0 if both ar NaN, 1 if d1 is valid and d2 is NaN.
     // If d1 is NaN, both comparisons are false so we get -1, as needed.
     return (d1 > d2) - !(d1 >= d2);
-}
-
-// Three-way compare for complex types.
-pragma(inline, true)
-private int cmp3(T)(const T f1, const T f2)
-if (isComplex!T)
-{
-    if (int result = cmp3(f1.re, f2.re))
-        return result;
-    return cmp3(f1.im, f2.im);
 }
 
 unittest
@@ -78,49 +67,6 @@ unittest
     v = d_cdouble(42, 42);
     assert(cmp3(u, v) == 0);
     assert(cmp3(v, u) == 0);
-}
-
-// @@@DEPRECATED_2.105@@@
-template Array(T)
-if (isComplex!T)
-{
-  pure nothrow @safe:
-
-    bool equals(T[] s1, T[] s2)
-    {
-        size_t len = s1.length;
-        if (len != s2.length)
-            return false;
-        for (size_t u = 0; u < len; u++)
-        {
-            if (!Floating!T.equals(s1[u], s2[u]))
-                return false;
-        }
-        return true;
-    }
-
-    int compare(T[] s1, T[] s2)
-    {
-        size_t len = s1.length;
-        if (s2.length < len)
-            len = s2.length;
-        for (size_t u = 0; u < len; u++)
-        {
-            if (int c = Floating!T.compare(s1[u], s2[u]))
-                return c;
-        }
-        return (s1.length > s2.length) - (s1.length < s2.length);
-    }
-
-    size_t hashOf(scope const T[] val)
-    {
-        size_t hash = 0;
-        foreach (ref o; val)
-        {
-            hash = core.internal.hash.hashOf(Floating!T.hashOf(o), hash);
-        }
-        return hash;
-    }
 }
 
 version (CoreUnittest)
@@ -273,8 +219,7 @@ if (T.sizeof == Base.sizeof && T.alignof == Base.alignof)
 
     static if (is(T == Base))
     {
-        static if ((__traits(isFloating, T) && T.mant_dig != 64) ||
-                   (isComplex!T && T.re.mant_dig != 64))
+        static if ((__traits(isFloating, T) && T.mant_dig != 64))
             // FP types except 80-bit X87 are passed in SIMD register.
             override @property uint flags() const { return 2; }
     }
@@ -432,72 +377,6 @@ class TypeInfo_f : TypeInfoGeneric!float {}
 class TypeInfo_d : TypeInfoGeneric!double {}
 class TypeInfo_e : TypeInfoGeneric!real {}
 
-// All imaginary floating-point types.
-
-// ifloat @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_o : TypeInfoGeneric!float
-{
-    override string toString() const pure nothrow @safe { return "ifloat"; }
-}
-
-// idouble @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_p : TypeInfoGeneric!double
-{
-    override string toString() const pure nothrow @safe { return "idouble"; }
-}
-
-// ireal @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_j : TypeInfoGeneric!real
-{
-    override string toString() const pure nothrow @safe { return "ireal"; }
-}
-
-// All complex floating-point types.
-
-// cfloat @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_q : TypeInfoGeneric!d_cfloat
-{
-    override string toString() const pure nothrow @safe { return "cfloat"; }
-
-    const: nothrow: pure: @trusted:
-    static if (__traits(hasMember, TypeInfo, "argTypes"))
-        override int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-        {
-            arg1 = typeid(double);
-            return 0;
-        }
-}
-
-// cdouble @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_r : TypeInfoGeneric!d_cdouble
-{
-    override string toString() const pure nothrow @safe { return "cdouble"; }
-
-    const: nothrow: pure: @trusted:
-    static if (__traits(hasMember, TypeInfo, "argTypes"))
-        override int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-        {
-            arg1 = typeid(double);
-            arg2 = typeid(double);
-            return 0;
-        }
-}
-
-// creal @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_c : TypeInfoGeneric!d_creal
-{
-    override string toString() const pure nothrow @safe { return "creal"; }
-
-    const: nothrow: pure: @trusted:
-    static if (__traits(hasMember, TypeInfo, "argTypes"))
-        override int argTypes(out TypeInfo arg1, out TypeInfo arg2)
-        {
-            arg1 = typeid(real);
-            arg2 = typeid(real);
-            return 0;
-        }
-}
-
 // Arrays of all integrals.
 class TypeInfo_Ah : TypeInfoArrayGeneric!ubyte {}
 class TypeInfo_Ab : TypeInfoArrayGeneric!(bool, ubyte) {}
@@ -561,46 +440,6 @@ unittest
 class TypeInfo_Af : TypeInfoArrayGeneric!float {}
 class TypeInfo_Ad : TypeInfoArrayGeneric!double {}
 class TypeInfo_Ae : TypeInfoArrayGeneric!real {}
-
-// Arrays of all imaginary floating-point types.
-
-// ifloat @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_Ao : TypeInfoArrayGeneric!float
-{
-    override string toString() const pure nothrow @safe { return "ifloat[]"; }
-}
-
-// idouble @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_Ap : TypeInfoArrayGeneric!double
-{
-    override string toString() const pure nothrow @safe { return "idouble[]"; }
-}
-
-// ireal @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_Aj : TypeInfoArrayGeneric!real
-{
-    override string toString() const pure nothrow @safe { return "ireal[]"; }
-}
-
-// Arrays of all complex floating-point types.
-
-// cfloat @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_Aq : TypeInfoArrayGeneric!d_cfloat
-{
-    override string toString() const pure nothrow @safe { return "cfloat[]"; }
-}
-
-// cdouble @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_Ar : TypeInfoArrayGeneric!d_cdouble
-{
-    override string toString() const pure nothrow @safe { return "cdouble[]"; }
-}
-
-// creal @@@DEPRECATED_2.105@@@
-deprecated class TypeInfo_Ac : TypeInfoArrayGeneric!d_creal
-{
-    override string toString() const pure nothrow @safe { return "creal[]"; }
-}
 
 // void[] is a bit different, behaves like ubyte[] for comparison purposes.
 class TypeInfo_Av : TypeInfo_Ah

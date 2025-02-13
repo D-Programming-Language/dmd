@@ -92,7 +92,6 @@ COPY=\
 	\
 	$(IMPDIR)\core\stdc\assert_.d \
 	$(IMPDIR)\core\stdc\stdatomic.d \
-	$(IMPDIR)\core\stdc\complex.d \
 	$(IMPDIR)\core\stdc\config.d \
 	$(IMPDIR)\core\stdc\ctype.d \
 	$(IMPDIR)\core\stdc\errno.d \
