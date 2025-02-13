@@ -1623,7 +1623,7 @@ private struct FuncDeclSem3
             for (size_t i = 0; i < funcdecl.foverrides.length; i++)
             {
                 FuncDeclaration fdv = funcdecl.foverrides[i];
-                if (fdv.fbody && !fdv.frequires)
+                if (!fdv.frequires)
                 {
                     .error(funcdecl.loc, "%s `%s` cannot have an in contract when overridden function `%s` does not have an in contract", funcdecl.kind, funcdecl.toPrettyChars, fdv.toPrettyChars());
                     break;
