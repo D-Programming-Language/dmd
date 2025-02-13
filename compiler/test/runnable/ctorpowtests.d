@@ -202,9 +202,9 @@ static assert(z.x==55.0);
 
 int copytest1()
 {
-   CopyTest z = CopyTest(3.4);
+   CopyTest z = CopyTest(34.0);
    CopyTest w = z;
-   assert(w.x == 36.0);
+   assert(w.x == 342.0);
    CopyTest2 q = CopyTest2(7);
    CopyTest2 q2 = q;
    CopyTest2 q3 = q2;

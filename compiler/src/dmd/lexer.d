@@ -3074,16 +3074,24 @@ class Lexer
         {
         case 'F':
         case 'f':
+        {
             if (isWellformedString && !isOutOfRange)
                 isOutOfRange = Port.isFloat32LiteralOutOfRange(sbufptr);
+            float f = t.floatvalue;
+            t.floatvalue = f;                   // force round to float
             result = TOK.float32Literal;
             p++;
             break;
+        }
         default:
+        {
             if (isWellformedString && !isOutOfRange)
                 isOutOfRange = Port.isFloat64LiteralOutOfRange(sbufptr);
+            double d = t.floatvalue;
+            t.floatvalue = d;                   // force round to double
             result = TOK.float64Literal;
             break;
+        }
         case 'l':
             if (!Ccompile)
                 error("use 'L' suffix instead of 'l'");

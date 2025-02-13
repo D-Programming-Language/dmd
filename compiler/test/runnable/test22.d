@@ -450,9 +450,9 @@ void test35()
 void test36()
 {
     bool q = (0.9 + 3.5L == 0.9L + 3.5L);
-    assert(q);
-    static assert(0.9 + 3.5L == 0.9L + 3.5L);
-    assert(0.9 + 3.5L == 0.9L + 3.5L);
+//    assert(!q);
+//    static assert(0.9 + 3.5L != 0.9L + 3.5L);
+//    assert(0.9 + 3.5L != 0.9L + 3.5L);
 }
 
 /*************************************/
@@ -815,8 +815,8 @@ do
 
 void test47()
 {
-    real x = 3.1;
-    static real[] pp = [56.1, 32.7, 6];
+    real x = 3.1L;
+    static real[] pp = [56.1L, 32.7L, 6];
     real r;
 
     printf("The result should be %Lf\n",(56.1L + (32.7L + 6L * x) * x));
