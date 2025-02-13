@@ -238,6 +238,7 @@ class Parser(AST, Lexer = dmd.lexer.Lexer) : Lexer
                                     if (id.ident == Id.__edition_latest_do_not_use)
                                     {
                                         mod.edition = Edition.latest;
+                                        this.edition = Edition.latest;
                                         continue;
                                     }
 
