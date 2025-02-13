@@ -69,6 +69,8 @@ enum TOK : ubyte
     identity,
     notIdentity,
     is_,
+    ltQuestion,
+    gtQuestion,
 
     leftShift,
     rightShift,
@@ -843,6 +845,8 @@ extern (C++) struct Token
         TOK.pound: "#",
         TOK.arrow: "->",
         TOK.colonColon: "::",
+        TOK.ltQuestion: "<?",
+        TOK.gtQuestion: ">?",
 
         // For debugging
         TOK.error: "error",
