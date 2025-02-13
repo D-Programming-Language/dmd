@@ -2549,6 +2549,16 @@ void test9()
 
 ////////////////////////////////////////////////////////////////////////
 
+void test10()
+{
+    int v = 0x12345678;
+    float f = cast(ref float)v;
+    float g = *cast(float*)&v;
+    assert(f == g);
+}
+
+////////////////////////////////////////////////////////////////////////
+
 int main()
 {
     // All the various integer divide tests
@@ -2651,6 +2661,7 @@ int main()
     test20574();
     test8();
     test9();
+    test10();
 
     printf("Success\n");
     return 0;
