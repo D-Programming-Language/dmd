@@ -6113,99 +6113,98 @@ private extern(C++) class SearchVisitor : Visitor
                 if (s && s.isOverloadSet())
                     a = sds.mergeOverloadSet(ident, a, s);
             }
-            else if (s2 && s != s2)
+            else if (!s2 || s == s2)
+                continue;
+
+            if (s.toAlias() == s2.toAlias() || s.getType() == s2.getType() && s.getType())
             {
-                if (s.toAlias() == s2.toAlias() || s.getType() == s2.getType() && s.getType())
-                {
-                    /* After following aliases, we found the same
-                     * symbol, so it's not an ambiguity.  But if one
-                     * alias is deprecated or less accessible, prefer
-                     * the other.
-                     */
-                    if (s.isDeprecated() || s.visible() < s2.visible() && s2.visible().kind != Visibility.Kind.none)
-                        s = s2;
-                }
-                else
-                {
-                    /* Two imports of the same module should be regarded as
-                     * the same.
-                     */
-                    Import i1 = s.isImport();
-                    Import i2 = s2.isImport();
-                    if (!(i1 && i2 && (i1.mod == i2.mod || (!i1.parent.isImport() && !i2.parent.isImport() && i1.ident.equals(i2.ident)))))
-                    {
-                        /* https://issues.dlang.org/show_bug.cgi?id=8668
-                         * Public selective import adds AliasDeclaration in module.
-                         * To make an overload set, resolve aliases in here and
-                         * get actual overload roots which accessible via s and s2.
-                         */
-                        s = s.toAlias();
-                        s2 = s2.toAlias();
-                        /* If both s2 and s are overloadable (though we only
-                         * need to check s once)
-                         */
-
-                        auto so2 = s2.isOverloadSet();
-                        if ((so2 || s2.isOverloadable()) && (a || s.isOverloadable()))
-                        {
-                            if (symbolIsVisible(sds, s2))
-                            {
-                                a = sds.mergeOverloadSet(ident, a, s2);
-                            }
-                            if (!symbolIsVisible(sds, s))
-                                s = s2;
-                            continue;
-                        }
-
-                        /* Two different overflow sets can have the same members
-                         * https://issues.dlang.org/show_bug.cgi?id=16709
-                         */
-                        auto so = s.isOverloadSet();
-                        if (so && so2)
-                        {
-                            if (so.a.length == so2.a.length)
-                            {
-                                foreach (j; 0 .. so.a.length)
-                                {
-                                    if (so.a[j] !is so2.a[j])
-                                        goto L1;
-                                }
-                                continue;  // the same
-                              L1:
-                                {   } // different
-                            }
-                        }
-
-                        if (flags & SearchOpt.ignoreAmbiguous) // if return NULL on ambiguity
-                            return setResult(null);
-
-                        /* If two imports from C import files, pick first one, as C has global name space
-                         */
-                        if (s.isCsymbol() && s2.isCsymbol())
-                            continue;
-
-                        if (!(flags & SearchOpt.ignoreErrors))
-                            ScopeDsymbol.multiplyDefined(loc, s, s2);
-                        break;
-                    }
-                }
+                /* After following aliases, we found the same
+                 * symbol, so it's not an ambiguity.  But if one
+                 * alias is deprecated or less accessible, prefer
+                 * the other.
+                 */
+                if (s.isDeprecated() || s.visible() < s2.visible() && s2.visible().kind != Visibility.Kind.none)
+                    s = s2;
+                continue;
             }
-        }
-        if (s)
-        {
-            /* Build special symbol if we had multiple finds
+
+            /* Two imports of the same module should be regarded as
+             * the same.
              */
-            if (a)
+            Import i1 = s.isImport();
+            Import i2 = s2.isImport();
+            if (i1 && i2 && (i1.mod == i2.mod || (!i1.parent.isImport() && !i2.parent.isImport() && i1.ident.equals(i2.ident))))
+                continue;
+
+            /* https://issues.dlang.org/show_bug.cgi?id=8668
+             * Public selective import adds AliasDeclaration in module.
+             * To make an overload set, resolve aliases in here and
+             * get actual overload roots which accessible via s and s2.
+             */
+            s = s.toAlias();
+            s2 = s2.toAlias();
+            /* If both s2 and s are overloadable (though we only
+             * need to check s once)
+             */
+
+            auto so2 = s2.isOverloadSet();
+            if ((so2 || s2.isOverloadable()) && (a || s.isOverloadable()))
             {
-                if (!s.isOverloadSet())
-                    a = sds.mergeOverloadSet(ident, a, s);
-                s = a;
+                if (symbolIsVisible(sds, s2))
+                {
+                    a = sds.mergeOverloadSet(ident, a, s2);
+                }
+                if (!symbolIsVisible(sds, s))
+                    s = s2;
+                continue;
             }
-            //printf("\tfound in imports %s.%s\n", toChars(), s.toChars());
-            return setResult(s);
+
+            /* Two different overflow sets can have the same members
+             * https://issues.dlang.org/show_bug.cgi?id=16709
+             */
+            auto so = s.isOverloadSet();
+            if (so && so2)
+            {
+                if (so.a.length == so2.a.length)
+                {
+                    foreach (j; 0 .. so.a.length)
+                    {
+                        if (so.a[j] !is so2.a[j])
+                            goto L1;
+                    }
+                    continue;  // the same
+                  L1:
+                    {   } // different
+                }
+            }
+
+            if (flags & SearchOpt.ignoreAmbiguous) // if return NULL on ambiguity
+                return setResult(null);
+
+            /* If two imports from C import files, pick first one, as C has global name space
+             */
+            if (s.isCsymbol() && s2.isCsymbol())
+                continue;
+
+            if (!(flags & SearchOpt.ignoreErrors))
+                ScopeDsymbol.multiplyDefined(loc, s, s2);
+            break;
         }
-        //printf(" not found in imports\n");
-        return setResult(null);
+        if (!s)
+        {
+            //printf(" not found in imports\n");
+            return setResult(null);
+        }
+        /* Build special symbol if we had multiple finds
+         */
+        if (a)
+        {
+            if (!s.isOverloadSet())
+                a = sds.mergeOverloadSet(ident, a, s);
+            s = a;
+        }
+        //printf("\tfound in imports %s.%s\n", toChars(), s.toChars());
+        return setResult(s);
     }
 
     override void visit(WithScopeSymbol ws)
@@ -6324,107 +6323,110 @@ private extern(C++) class SearchVisitor : Visitor
         /* *pvar is lazily initialized, so if we refer to $
          * multiple times, it gets set only once.
          */
-        if (!*pvar) // if not already initialized
+        if (*pvar)
         {
-            /* Create variable v and set it to the value of $
+            (*pvar).dsymbolSemantic(ass._scope);
+            return setResult((*pvar));
+        }
+
+        /* Create variable v and set it to the value of $
+         */
+        VarDeclaration v;
+        Type t;
+        if (auto tupexp = ce.isTupleExp())
+        {
+            /* It is for an expression tuple, so the
+             * length will be a const.
              */
-            VarDeclaration v;
-            Type t;
-            if (auto tupexp = ce.isTupleExp())
+            Expression e = new IntegerExp(Loc.initial, tupexp.exps.length, Type.tsize_t);
+            v = new VarDeclaration(loc, Type.tsize_t, Id.dollar, new ExpInitializer(Loc.initial, e));
+            v.storage_class |= STC.temp | STC.static_ | STC.const_;
+        }
+        else if (ce.type && (t = ce.type.toBasetype()) !is null && (t.ty == Tstruct || t.ty == Tclass))
+        {
+            // Look for opDollar
+            assert(exp.op == EXP.array || exp.op == EXP.slice);
+            AggregateDeclaration ad = isAggregate(t);
+            assert(ad);
+            Dsymbol s = ad.search(loc, Id.opDollar);
+            if (!s) // no dollar exists -- search in higher scope
+                return setResult(null);
+            s = s.toAlias();
+            Expression e = null;
+            // Check for multi-dimensional opDollar(dim) template.
+            if (TemplateDeclaration td = s.isTemplateDeclaration())
             {
-                /* It is for an expression tuple, so the
-                 * length will be a const.
-                 */
-                Expression e = new IntegerExp(Loc.initial, tupexp.exps.length, Type.tsize_t);
-                v = new VarDeclaration(loc, Type.tsize_t, Id.dollar, new ExpInitializer(Loc.initial, e));
-                v.storage_class |= STC.temp | STC.static_ | STC.const_;
-            }
-            else if (ce.type && (t = ce.type.toBasetype()) !is null && (t.ty == Tstruct || t.ty == Tclass))
-            {
-                // Look for opDollar
-                assert(exp.op == EXP.array || exp.op == EXP.slice);
-                AggregateDeclaration ad = isAggregate(t);
-                assert(ad);
-                Dsymbol s = ad.search(loc, Id.opDollar);
-                if (!s) // no dollar exists -- search in higher scope
-                    return setResult(null);
-                s = s.toAlias();
-                Expression e = null;
-                // Check for multi-dimensional opDollar(dim) template.
-                if (TemplateDeclaration td = s.isTemplateDeclaration())
+                dinteger_t dim = 0;
+                if (auto ae = exp.isArrayExp())
                 {
-                    dinteger_t dim = 0;
-                    if (auto ae = exp.isArrayExp())
-                    {
-                        dim = ae.currentDimension;
-                    }
-                    else if (exp.isSliceExp())
-                    {
-                        dim = 0; // slices are currently always one-dimensional
-                    }
-                    else
-                    {
-                        assert(0);
-                    }
-                    auto tiargs = new Objects();
-                    Expression edim = new IntegerExp(Loc.initial, dim, Type.tsize_t);
-                    edim = edim.expressionSemantic(ass._scope);
-                    tiargs.push(edim);
-                    e = new DotTemplateInstanceExp(loc, ce, td.ident, tiargs);
+                    dim = ae.currentDimension;
+                }
+                else if (exp.isSliceExp())
+                {
+                    dim = 0; // slices are currently always one-dimensional
                 }
                 else
                 {
-                    /* opDollar exists, but it's not a template.
-                     * This is acceptable ONLY for single-dimension indexing.
-                     * Note that it's impossible to have both template & function opDollar,
-                     * because both take no arguments.
-                     */
-                    auto ae = exp.isArrayExp();
-                    if (ae && ae.arguments.length != 1)
-                    {
-                        error(exp.loc, "`%s` only defines opDollar for one dimension", ad.toChars());
-                        return setResult(null);
-                    }
-                    Declaration d = s.isDeclaration();
-                    assert(d);
-                    e = new DotVarExp(loc, ce, d);
+                    assert(0);
                 }
-                e = e.expressionSemantic(ass._scope);
-                if (!e.type)
-                    error(exp.loc, "`%s` has no value", e.toChars());
-                t = e.type.toBasetype();
-                if (t && t.ty == Tfunction)
-                    e = new CallExp(e.loc, e);
-                v = new VarDeclaration(loc, null, Id.dollar, new ExpInitializer(Loc.initial, e));
-                v.storage_class |= STC.temp | STC.ctfe | STC.rvalue;
+                auto tiargs = new Objects();
+                Expression edim = new IntegerExp(Loc.initial, dim, Type.tsize_t);
+                edim = edim.expressionSemantic(ass._scope);
+                tiargs.push(edim);
+                e = new DotTemplateInstanceExp(loc, ce, td.ident, tiargs);
             }
             else
             {
-                /* For arrays, $ will either be a compile-time constant
-                 * (in which case its value in set during constant-folding),
-                 * or a variable (in which case an expression is created in
-                 * toir.c).
+                /* opDollar exists, but it's not a template.
+                 * This is acceptable ONLY for single-dimension indexing.
+                 * Note that it's impossible to have both template & function opDollar,
+                 * because both take no arguments.
                  */
-
-                // https://issues.dlang.org/show_bug.cgi?id=16213
-                // For static arrays $ is known at compile time,
-                // so declare it as a manifest constant.
-                auto tsa = ce.type ? ce.type.isTypeSArray() : null;
-                if (tsa)
+                auto ae = exp.isArrayExp();
+                if (ae && ae.arguments.length != 1)
                 {
-                    auto e = new ExpInitializer(loc, tsa.dim);
-                    v = new VarDeclaration(loc, tsa.dim.type, Id.dollar, e, STC.manifest);
+                    error(exp.loc, "`%s` only defines opDollar for one dimension", ad.toChars());
+                    return setResult(null);
                 }
-                else
-                {
-                    auto e = new VoidInitializer(Loc.initial);
-                    e.type = Type.tsize_t;
-                    v = new VarDeclaration(loc, Type.tsize_t, Id.dollar, e);
-                    v.storage_class |= STC.temp | STC.ctfe; // it's never a true static variable
-                }
+                Declaration d = s.isDeclaration();
+                assert(d);
+                e = new DotVarExp(loc, ce, d);
             }
-            *pvar = v;
+            e = e.expressionSemantic(ass._scope);
+            if (!e.type)
+                error(exp.loc, "`%s` has no value", e.toChars());
+            t = e.type.toBasetype();
+            if (t && t.ty == Tfunction)
+                e = new CallExp(e.loc, e);
+            v = new VarDeclaration(loc, null, Id.dollar, new ExpInitializer(Loc.initial, e));
+            v.storage_class |= STC.temp | STC.ctfe | STC.rvalue;
         }
+        else
+        {
+            /* For arrays, $ will either be a compile-time constant
+             * (in which case its value in set during constant-folding),
+             * or a variable (in which case an expression is created in
+             * toir.c).
+             */
+
+            // https://issues.dlang.org/show_bug.cgi?id=16213
+            // For static arrays $ is known at compile time,
+            // so declare it as a manifest constant.
+            auto tsa = ce.type ? ce.type.isTypeSArray() : null;
+            if (tsa)
+            {
+                auto e = new ExpInitializer(loc, tsa.dim);
+                v = new VarDeclaration(loc, tsa.dim.type, Id.dollar, e, STC.manifest);
+            }
+            else
+            {
+                auto e = new VoidInitializer(Loc.initial);
+                e.type = Type.tsize_t;
+                v = new VarDeclaration(loc, Type.tsize_t, Id.dollar, e);
+                v.storage_class |= STC.temp | STC.ctfe; // it's never a true static variable
+            }
+        }
+        *pvar = v;
         (*pvar).dsymbolSemantic(ass._scope);
         return setResult((*pvar));
 
@@ -6661,31 +6663,29 @@ private extern(C++) class SetScopeVisitor : Visitor
     override void visit(Import i)
     {
         visit(cast(Dsymbol)i);
-        if (i.aliasdecls.length)
-        {
-            if (!i.mod)
-                i.importAll(sc);
+        if (!i.aliasdecls.length)
+            return;
+        if (!i.mod)
+            i.importAll(sc);
 
-            sc = sc.push(i.mod);
-            sc.visibility = i.visibility;
-            foreach (ad; i.aliasdecls)
-                ad.setScope(sc);
-            sc = sc.pop();
-        }
+        sc = sc.push(i.mod);
+        sc.visibility = i.visibility;
+        foreach (ad; i.aliasdecls)
+            ad.setScope(sc);
+        sc = sc.pop();
     }
 
     override void visit(Nspace ns)
     {
         visit(cast(Dsymbol)ns);
-        if (ns.members)
-        {
-            assert(sc);
-            sc = sc.push(ns);
-            sc.linkage = LINK.cpp; // namespaces default to C++ linkage
-            sc.parent = ns;
-            ns.members.foreachDsymbol(s => s.setScope(sc));
-            sc.pop();
-        }
+        if (!ns.members)
+            return;
+        assert(sc);
+        sc = sc.push(ns);
+        sc.linkage = LINK.cpp; // namespaces default to C++ linkage
+        sc.parent = ns;
+        ns.members.foreachDsymbol(s => s.setScope(sc));
+        sc.pop();
     }
 
     override void visit(EnumDeclaration ed)
@@ -6709,13 +6709,13 @@ private extern(C++) class SetScopeVisitor : Visitor
     {
         Dsymbols* d = atr.include(sc);
         //printf("\tAttribDeclaration::setScope '%s', d = %p\n",toChars(), d);
-        if (d)
-        {
-            Scope* sc2 = atr.newScope(sc);
-            d.foreachDsymbol( s => s.setScope(sc2) );
-            if (sc2 != sc)
-                sc2.pop();
-        }
+        if (!d)
+            return;
+
+        Scope* sc2 = atr.newScope(sc);
+        d.foreachDsymbol( s => s.setScope(sc2) );
+        if (sc2 != sc)
+            sc2.pop();
     }
 
     override void visit(DeprecatedDeclaration dd)
@@ -7318,75 +7318,75 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
     override void visit(AnonDeclaration anond)
     {
         //printf("\tAnonDeclaration::setFieldOffset %s %p\n", isunion ? "union" : "struct", anond);
-        if (anond.decl)
+        if (!anond.decl)
+            return;
+
+        /* This works by treating an AnonDeclaration as an aggregate 'member',
+         * so in order to place that member we need to compute the member's
+         * size and alignment.
+         */
+        size_t fieldstart = ad.fields.length;
+
+        /* Hackishly hijack ad's structsize and alignsize fields
+         * for use in our fake anon aggregate member.
+         */
+        uint savestructsize = ad.structsize;
+        uint savealignsize = ad.alignsize;
+        ad.structsize = 0;
+        ad.alignsize = 0;
+
+        FieldState fs;
+        anond.decl.foreachDsymbol( (s)
         {
-            /* This works by treating an AnonDeclaration as an aggregate 'member',
-             * so in order to place that member we need to compute the member's
-             * size and alignment.
-             */
-            size_t fieldstart = ad.fields.length;
+            s.setFieldOffset(ad, &fs, anond.isunion);
+            if (anond.isunion)
+                fs.offset = 0;
+        });
 
-            /* Hackishly hijack ad's structsize and alignsize fields
-             * for use in our fake anon aggregate member.
-             */
-            uint savestructsize = ad.structsize;
-            uint savealignsize = ad.alignsize;
-            ad.structsize = 0;
-            ad.alignsize = 0;
-
-            FieldState fs;
-            anond.decl.foreachDsymbol( (s)
-            {
-                s.setFieldOffset(ad, &fs, anond.isunion);
-                if (anond.isunion)
-                    fs.offset = 0;
-            });
-
-            /* https://issues.dlang.org/show_bug.cgi?id=13613
-             * If the fields in this.members had been already
-             * added in ad.fields, just update *poffset for the subsequent
-             * field offset calculation.
-             */
-            if (fieldstart == ad.fields.length)
-            {
-                ad.structsize = savestructsize;
-                ad.alignsize = savealignsize;
-                fieldState.offset = ad.structsize;
-                return;
-            }
-
-            anond.anonstructsize = ad.structsize;
-            anond.anonalignsize = ad.alignsize;
+        /* https://issues.dlang.org/show_bug.cgi?id=13613
+         * If the fields in this.members had been already
+         * added in ad.fields, just update *poffset for the subsequent
+         * field offset calculation.
+         */
+        if (fieldstart == ad.fields.length)
+        {
             ad.structsize = savestructsize;
             ad.alignsize = savealignsize;
+            fieldState.offset = ad.structsize;
+            return;
+        }
 
-            // 0 sized structs are set to 1 byte
-            if (anond.anonstructsize == 0)
-            {
-                anond.anonstructsize = 1;
-                anond.anonalignsize = 1;
-            }
+        anond.anonstructsize = ad.structsize;
+        anond.anonalignsize = ad.alignsize;
+        ad.structsize = savestructsize;
+        ad.alignsize = savealignsize;
 
-            assert(anond._scope);
-            auto alignment = anond._scope.alignment();
+        // 0 sized structs are set to 1 byte
+        if (anond.anonstructsize == 0)
+        {
+            anond.anonstructsize = 1;
+            anond.anonalignsize = 1;
+        }
 
-            /* Given the anon 'member's size and alignment,
-             * go ahead and place it.
-             */
-            anond.anonoffset = placeField(anond.loc,
-                fieldState.offset,
-                anond.anonstructsize, anond.anonalignsize, alignment,
-                ad.structsize, ad.alignsize,
-                isunion);
+        assert(anond._scope);
+        auto alignment = anond._scope.alignment();
 
-            // Add to the anon fields the base offset of this anonymous aggregate
-            //printf("anon fields, anonoffset = %d\n", anonoffset);
-            foreach (const i; fieldstart .. ad.fields.length)
-            {
-                VarDeclaration v = ad.fields[i];
-                //printf("\t[%d] %s %d\n", i, v.toChars(), v.offset);
-                v.offset += anond.anonoffset;
-            }
+        /* Given the anon 'member's size and alignment,
+         * go ahead and place it.
+         */
+        anond.anonoffset = placeField(anond.loc,
+            fieldState.offset,
+            anond.anonstructsize, anond.anonalignsize, alignment,
+            ad.structsize, ad.alignsize,
+            isunion);
+
+        // Add to the anon fields the base offset of this anonymous aggregate
+        //printf("anon fields, anonoffset = %d\n", anonoffset);
+        foreach (const i; fieldstart .. ad.fields.length)
+        {
+            VarDeclaration v = ad.fields[i];
+            //printf("\t[%d] %s %d\n", i, v.toChars(), v.offset);
+            v.offset += anond.anonoffset;
         }
     }
 }
@@ -7584,34 +7584,31 @@ extern(C++) class IncludeVisitor : Visitor
         sif.onStack = true;
         scope(exit) sif.onStack = false;
 
-        if (sc && sif.condition.inc == Include.notComputed)
-        {
-            assert(sif.scopesym); // addMember is already done
-            assert(sif._scope); // setScope is already done
-
-            Scope* saved_scope = sc;
-            sc = sif._scope;
-            visit(cast(ConditionalDeclaration) sif);
-            Dsymbols* d = symbols;
-            sc = saved_scope;
-
-            if (d && !sif.addisdone)
-            {
-                // Add members lazily.
-                d.foreachDsymbol( s => s.addMember(sif._scope, sif.scopesym) );
-
-                // Set the member scopes lazily.
-                d.foreachDsymbol( s => s.setScope(sif._scope) );
-
-                sif.addisdone = true;
-            }
-            symbols = d;
-            return;
-        }
-        else
+        if (!sc || sif.condition.inc != Include.notComputed)
         {
             visit(cast(ConditionalDeclaration)sif);
+            return;
         }
+        assert(sif.scopesym); // addMember is already done
+        assert(sif._scope); // setScope is already done
+
+        Scope* saved_scope = sc;
+        sc = sif._scope;
+        visit(cast(ConditionalDeclaration) sif);
+        Dsymbols* d = symbols;
+        sc = saved_scope;
+
+        if (d && !sif.addisdone)
+        {
+            // Add members lazily.
+            d.foreachDsymbol( s => s.addMember(sif._scope, sif.scopesym) );
+
+            // Set the member scopes lazily.
+            d.foreachDsymbol( s => s.setScope(sif._scope) );
+
+            sif.addisdone = true;
+        }
+        symbols = d;
     }
 
     override void visit(StaticForeachDeclaration sfd)
