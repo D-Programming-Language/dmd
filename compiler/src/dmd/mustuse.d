@@ -38,7 +38,10 @@ bool checkMustUse(Expression e, Scope* sc)
     {
         auto sd = sym.isStructDeclaration();
         // isStructDeclaration returns non-null for both structs and unions
-        if (sd && hasMustUseAttribute(sd, sc) && !isAssignment(e) && !isIncrementOrDecrement(e))
+        if (sd && hasMustUseAttribute(sd, sc)
+            && !isAssignment(e)
+            && !isCtorAssignment(e)
+            && !isIncrementOrDecrement(e))
         {
             error(e.loc, "ignored value of `@%s` type `%s`; prepend a `cast(void)` if intentional",
                 Id.udaMustUse.toChars(), e.type.toPrettyChars(true));
@@ -102,6 +105,25 @@ private bool isAssignment(Expression e)
         }
     }
     return false;
+}
+
+/**
+ * Returns: true if `e` is an assignment that's been rewritten to a
+ * constructor call.
+ */
+private bool isCtorAssignment(Expression e)
+{
+    import dmd.id : Id;
+
+    auto comma = e.isCommaExp();
+    if (!comma)
+        return false;
+    if (!isAssignment(comma.e1))
+        return false;
+    auto call = comma.e2.isCallExp();
+    if (!call)
+        return false;
+    return call.f.ident == Id.ctor;
 }
 
 /**
