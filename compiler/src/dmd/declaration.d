@@ -1124,16 +1124,6 @@ extern (C++) class VarDeclaration : Declaration
         return e;
     }
 
-    override final void checkCtorConstInit()
-    {
-        version (none)
-        {
-            /* doesn't work if more than one static ctor */
-            if (ctorinit == 0 && isCtorinit() && !isField())
-                error("missing initializer in static constructor for const variable");
-        }
-    }
-
     /************************************
      * Check to see if this variable is actually in an enclosing function
      * rather than the current one.
