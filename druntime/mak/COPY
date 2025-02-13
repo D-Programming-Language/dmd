@@ -554,7 +554,6 @@ COPY=\
 	$(IMPDIR)\core\sys\windows\wtypes.d \
 	\
 	$(IMPDIR)\core\thread\context.d \
-	$(IMPDIR)\core\thread\fiber\base.d \
 	$(IMPDIR)\core\thread\fiber\package.d \
 	$(IMPDIR)\core\thread\types.d \
 	$(IMPDIR)\core\thread\threadgroup.d \

@@ -513,7 +513,6 @@ DOCS=\
 	$(DOCDIR)\core_sys_windows_stdc_time.html \
 	\
 	$(DOCDIR)\core_thread_context.html \
-	$(DOCDIR)\core_thread_fiber_base.html \
 	$(DOCDIR)\core_thread_fiber_package.html \
 	$(DOCDIR)\core_thread_fiber.html \
 	$(DOCDIR)\core_thread_package.html \

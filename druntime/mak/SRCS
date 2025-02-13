@@ -547,7 +547,6 @@ SRCS=\
 	src\core\sys\windows\wtsapi32.d \
 	src\core\sys\windows\wtypes.d \
 	\
-	src\core\thread\fiber\base.d \
 	src\core\thread\fiber\package.d \
 	src\core\thread\types.d \
 	src\core\thread\threadgroup.d \
