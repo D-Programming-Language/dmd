@@ -7026,12 +7026,14 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
     AggregateDeclaration ad;
     FieldState* fieldState;
     bool isunion;
+    LINK linkage;
 
     this(AggregateDeclaration ad, FieldState* fieldState, bool isunion) @safe
     {
         this.ad = ad;
         this.fieldState = fieldState;
         this.isunion = isunion;
+	this.linkage = LINK.d;
     }
 
     override void visit(Dsymbol d) {}
@@ -7114,8 +7116,8 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
 
         const sz = t.size(vd.loc);
         assert(sz != SIZE_INVALID && sz < uint.max);
-        uint memsize = cast(uint)sz;                // size of member
-        uint memalignsize = target.fieldalign(t);   // size of member for alignment purposes
+        const memsize = cast(uint)sz;                // size of member
+        const memalignsize = target.fieldalign(t);   // size of member for alignment purposes
         vd.offset = placeField(vd.loc,
             fieldState.offset,
             memsize, memalignsize, vd.alignment,
@@ -7153,8 +7155,8 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
 
         const sz = t.size(bfd.loc);
         assert(sz != SIZE_INVALID && sz < uint.max);
-        uint memsize = cast(uint)sz;                // size of member
-        uint memalignsize = target.fieldalign(t);   // size of member for alignment purposes
+        const uint memsize = cast(uint)sz;                // size of member
+        const uint memalignsize = target.fieldalign(t);   // size of member for alignment purposes
         if (log) printf("          memsize: %u memalignsize: %u\n", memsize, memalignsize);
 
         if (bfd.fieldWidth == 0 && !anon)
@@ -7167,7 +7169,20 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
             assert(0, "unsupported bit-field style");
 
         const isMicrosoftStyle = style == TargetC.BitFieldStyle.MS;
-        const contributesToAggregateAlignment = target.c.contributesToAggregateAlignment(bfd);
+
+	/**
+	 * Indicates whether the specified bit-field contributes to the alignment
+	 * of the containing aggregate.
+	 * E.g., (not all) ARM ABIs do NOT ignore anonymous (incl. 0-length)
+	 * bit-fields.
+	 */
+        const bool contributesToAggregateAlignment = isMicrosoftStyle || !bfd.isAnonymous; // sufficient for supported architectures
+
+        /* Flag bitfield non-portable layouts that differ between MicrosoftStyle and non-MicrosoftStyle
+         * unless it's C semantics.
+         */
+        const checkPortable = !ad.isCsymbol() && linkage == LINK.d;
+        bool isPortable = true;  // start out assuming portable
 
         void startNewField()
         {
@@ -7208,19 +7223,16 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
 
         if (bfd.fieldWidth == 0)
         {
-            if (!isMicrosoftStyle && !isunion)
+            if (!isunion)
             {
-                // Use type of zero width field to align to next field
-                fieldState.offset = (fieldState.offset + memalignsize - 1) & ~(memalignsize - 1);
-                ad.structsize = fieldState.offset;
-            }
-            else if (isMicrosoftStyle && fieldState.inFlight && !isunion)
-            {
-                // documentation says align to next int
-                //const alsz = cast(uint)Type.tint32.size();
-                const alsz = memsize; // but it really does this
-                fieldState.offset = (fieldState.offset + alsz - 1) & ~(alsz - 1);
-                ad.structsize = fieldState.offset;
+                if (!isMicrosoftStyle || fieldState.inFlight)
+                {
+                    const alsz = isMicrosoftStyle
+                        ? memsize       // documentation says align to next int but memsize is actually used
+                        : memalignsize; // use type of zero width field to align to next field
+                    fieldState.offset = (fieldState.offset + alsz - 1) & ~(alsz - 1);
+                    ad.structsize = fieldState.offset;
+                }
             }
 
             fieldState.inFlight = false;
@@ -7229,7 +7241,7 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
 
         if (!fieldState.inFlight)
         {
-            //printf("not in flight\n");
+            if (log) printf("not in flight\n");
             startNewField();
         }
         else if (!isMicrosoftStyle)
@@ -7296,6 +7308,11 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
             fieldState.bitOffset = pastField;
         }
 
+        if (checkPortable && !isPortable)
+        {
+            error(bfd.loc, "bitfield layout not portable among supported C compilers, wrap with `extern (C)` or `extern (C++)`");
+        }
+
         //printf("\t%s: offset = %d bitOffset = %d fieldWidth = %d memsize = %d\n", toChars(), offset, bitOffset, fieldWidth, memsize);
         //printf("\t%s: memalignsize = %d\n", toChars(), memalignsize);
         //printf(" addField '%s' to '%s' at offset %d, size = %d\n", toChars(), ad.toChars(), offset, memsize);
@@ -7313,6 +7330,14 @@ private extern(C++) class SetFieldOffsetVisitor : Visitor
     override void visit(AttribDeclaration atd)
     {
         atd.include(null).foreachDsymbol( s => s.setFieldOffset(ad, fieldState, isunion) );
+    }
+
+    override void visit(LinkDeclaration atd)
+    {
+	LINK save = linkage;
+	linkage = atd.linkage;
+        atd.include(null).foreachDsymbol( s => s.setFieldOffset(ad, fieldState, isunion) );
+	linkage = save;
     }
 
     override void visit(AnonDeclaration anond)
