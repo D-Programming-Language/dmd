@@ -128,4 +128,12 @@ void main() {
     }
 
     test24731();
+	Array!string("test");
+}
+
+struct Array(T)
+{
+    this(U)(U...) {}
+    this(T single) { __ctor!T(single); }
+    this()() {}
 }

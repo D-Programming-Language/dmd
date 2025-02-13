@@ -6603,6 +6603,7 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             TypeFunction tf;
             const(char)* p;
             Dsymbol s;
+            bool isAggregateCall = false;
             exp.f = null;
             if (auto fe = exp.e1.isFuncExp())
             {
@@ -6649,12 +6650,27 @@ private extern (C++) final class ExpressionSemanticVisitor : Visitor
             }
             else if (exp.e1.op == EXP.template_)
             {
-                s = (cast(TemplateExp)exp.e1).td;
+                {
+                    TemplateExp te = exp.e1.isTemplateExp();
+                    s = te.td;
+                    isAggregateCall = te.td.onemember && te.td.onemember.isAggregateDeclaration();
+                }
             L2:
                 exp.f = resolveFuncCall(exp.loc, sc, s, tiargs, null, exp.argumentList,
                     exp.isUfcsRewrite ? FuncResolveFlag.ufcs : FuncResolveFlag.standard);
                 if (!exp.f || exp.f.errors)
                     return setError();
+
+                if (isAggregateCall)
+                    if (auto cd = exp.f.isCtorDeclaration())
+                    {
+                        // We resolved to a constructor, but calling a raw constructor gives a "need `this`"
+                        // error, so we extract that instantiated struct type from the constructor and retry
+                        // a CallExp with that.
+                        exp = new CallExp(exp.loc, new TypeExp(exp.loc, cd.type.nextOf()), exp.argumentList.arguments, exp.argumentList.names);
+                        goto Lagain;
+                    }
+
                 if (exp.f.needThis())
                 {
                     if (hasThis(sc))

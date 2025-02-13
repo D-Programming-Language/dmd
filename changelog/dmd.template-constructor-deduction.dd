@@ -1,0 +1,20 @@
+Constructor calls can implicitly instantiate struct templates
+
+Implicit Function Template Instantiation now also works with struct constructors.
+Example:
+
+---
+struct Tuple(T...)
+{
+    T fields;
+    this(T t) { this.fields = t; }
+}
+
+static assert(Tuple(1, 2, 3).fields[0] == 1);
+---
+
+This removes the need for helper functions such as:
+
+---
+auto tuple(T...)(T args) => Tuple!T(args);
+---

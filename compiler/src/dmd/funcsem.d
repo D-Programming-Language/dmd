@@ -1513,8 +1513,9 @@ enum FuncResolveFlag : ubyte
 }
 
 /*******************************************
- * Given a symbol that could be either a FuncDeclaration or
- * a function template, resolve it to a function symbol.
+ * Given a symbol that could be either a FuncDeclaration,
+ * a function template, or a struct template with constructors,
+ * resolve it to a function symbol.
  * Params:
  *      loc =           instantiation location
  *      sc =            instantiation scope
