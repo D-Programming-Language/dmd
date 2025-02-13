@@ -25,6 +25,7 @@ void test1()
 
 struct S
 {
+extern(C):
     uint a:3;
     uint b:1;
     ulong c:64;

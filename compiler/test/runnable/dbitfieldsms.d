@@ -55,6 +55,7 @@ import core.stdc.stdio;
 int is64bit() { return size_t.sizeof == 8; }  // otherwise assume 32 bit
 
 /*************************************************************/
+extern(C):
 
 struct T0  { ubyte x:1; };                       //
 struct T1  { short x:1; };                       //
@@ -75,7 +76,7 @@ struct S8B { ubyte a; short b:1; ubyte c:2; };   //
 struct S8C { ubyte a; int b:1; };                //
 struct S9  { ubyte a; ubyte b:2; short c:9; };   //
 //struct S10 { };                                //
-struct S11 { int :0; };                          // differs from C in that C sizeof is 4
+extern(D) struct S11 { int :0; };                // differs from C in that C sizeof is 4
 struct S12 { int :0; int x; };                   //
 struct S13 { uint x:12; uint x1:1; uint x2:1; uint x3:1; uint x4:1; int w; }; //
 struct S14 { ubyte a; ubyte b:4; int c:30; };    //
@@ -104,7 +105,7 @@ struct A10 { ushort a:8; ubyte b; };             //
 struct A11 { ubyte a; int b:5, c:11, :0, d:8;    //
              struct { int ee:8; } };
 
-int main()
+extern(D) int main()
 {
     /* MS produces identical results for 32 and 64 bit compiles,
      * DM is 32 bit only

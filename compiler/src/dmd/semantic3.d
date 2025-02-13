@@ -78,6 +78,7 @@ enum LOG = false;
 
 /*************************************
  * Does semantic analysis on function bodies.
+ * Also does struct field sanity checks.
  */
 void semantic3(Dsymbol dsym, Scope* sc)
 {
@@ -1550,6 +1551,9 @@ private extern(C++) final class Semantic3Visitor : Visitor
             return;
 
         StructDeclaration sd = ad.isStructDeclaration();
+        if (sd !is null && !sanityCheckOfStructFields(sd))
+            return;
+
         if (!sc) // from runDeferredSemantic3 for TypeInfo generation
         {
             assert(sd);
@@ -1749,6 +1753,63 @@ extern (D) bool checkClosure(FuncDeclaration fd)
                 }
             }
         }
+    }
+
+    return true;
+}
+
+private:
+
+bool sanityCheckOfStructFields(StructDeclaration sd)
+{
+    //printf("%s:\n", sd.ident.toChars);
+    uint storageSize;
+    uint bitsSoFar;
+    BitFieldDeclaration startOfZero;
+
+    foreach(field; sd.fields)
+    {
+        //printf("    %s: offset=%d, _linkage=%d\n", field.ident.toChars, field.offset, field._linkage);
+        //printf("        bitsSoFar=%d\n", bitsSoFar);
+
+        BitFieldDeclaration bfd = field.isBitFieldDeclaration();
+        if (!bfd)
+        {
+            bitsSoFar = 0;
+            storageSize = 0;
+            startOfZero = null;
+            continue;
+        }
+
+        //printf("        fieldWidth=%d, bitOffset=%d\n", bfd.fieldWidth, bfd.bitOffset);
+
+        if (storageSize == 0)
+            storageSize = target.fieldalign(bfd.type.toBasetype()) * 8;
+
+        if (bitsSoFar == 0)
+            startOfZero = null;
+
+        if (bfd.bitOffset != bitsSoFar && bfd._linkage == LINK.d)
+        {
+            if (startOfZero)
+            {
+                .error(startOfZero.loc, "Unpredictable bit field layout detected starting at bit field `%s`", startOfZero.ident.toChars);
+                .errorSupplemental(field.loc, "Bit offset for `%s` expected %d, actual %d", field.ident.toChars, bitsSoFar, bfd.bitOffset);
+                .errorSupplemental(field.loc, "To disable this check specify an extern that is not D i.e. `extern(C)`");
+            }
+            else
+            {
+                .error(field.loc, "Unpredictable bit field layout detected for bit field `%s`", field.ident.toChars);
+                .errorSupplemental(field.loc, "Bit offset expected %d, actual %d", bitsSoFar, bfd.bitOffset);
+                .errorSupplemental(field.loc, "To disable this check specify an extern that is not D i.e. `extern(C)`");
+            }
+        }
+
+        if (bfd.bitOffset == 0)
+            startOfZero = bfd;
+
+        bitsSoFar += bfd.fieldWidth;
+        bitsSoFar %= storageSize;
     }
 
     return true;

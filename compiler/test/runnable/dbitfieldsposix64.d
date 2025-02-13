@@ -21,8 +21,8 @@ S8A = 2 2 | 2 2
 S8B = 2 2 | 2 2
 S8C = 4 4 | 4 4
 S9  = 4 2 | 4 2
-S10 = 1 1 | 0 1
-S11 = 1 1 | 0 1
+S10 = 0 1 | 0 1
+S11 = 0 1 | 0 1
 S12 = 4 4 | 4 4
 S13 = 8 4 | 8 4
 S14 = 8 4 | 8 4
@@ -55,6 +55,7 @@ import core.stdc.stdio;
 int is64bit() { return size_t.sizeof == 8; }  // otherwise assume 32 bit
 
 /*************************************************************/
+extern(C):
 
 struct T0  { ubyte x:1; };                       // 1 1
 struct T1  { short x:1; };                       // 2 2
@@ -104,6 +105,7 @@ struct A10 { ushort a:8; ubyte b; };             // 2 2
 struct A11 { ubyte a; int b:5, c:11, :0, d:8;    // 12 4
              struct { int ee:8; } };
 
+extern(D):
 int main()
 {
     printf("T0 = %d %d | 1 1\n", cast(int)T0.sizeof, cast(int)T0.alignof);

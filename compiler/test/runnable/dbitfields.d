@@ -65,6 +65,7 @@ void test3()
 
 struct S4
 {
+extern(C):
     int i1;
     uint a:2, b:31;
 }
@@ -84,6 +85,7 @@ void test4()
 
 struct S5
 {
+extern(C):
     int i1;
     uint a:2, :0, b:5;
 }
@@ -178,6 +180,7 @@ static assert(test7s2() == -2);
 
 struct S24257
 {
+extern(C):
     uint : 15;
     bool done : 1;
 }
