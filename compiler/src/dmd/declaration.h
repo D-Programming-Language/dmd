@@ -121,11 +121,10 @@ public:
     Type *type;
     Type *originalType;         // before semantic analysis
     StorageClass storage_class;
-    Visibility visibility;
-    LINK _linkage;              // may be `LINK::system`; use `resolvedLinkage()` to resolve it
-    short inuse;                // used to detect cycles
-    uint8_t adFlags;
     DString mangleOverride;     // overridden symbol with pragma(mangle, "...")
+    Visibility visibility;
+    short inuse;                // used to detect cycles
+    uint8_t bitFields;
 
     const char *kind() const override;
     uinteger_t size(Loc loc) override final;

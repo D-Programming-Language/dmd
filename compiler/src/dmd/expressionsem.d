@@ -853,7 +853,7 @@ extern (D) Expression doCopyOrMove(Scope* sc, Expression e, Type t, bool nrvo, b
          */
         VarDeclaration vd = new VarDeclaration(e.loc, e.type, Identifier.generateId("__copyrvalue"), null);
         if (nrvo)
-            vd.adFlags |= Declaration.nrvo;
+            vd.nrvo = true;
         vd.storage_class |= STC.nodtor;
         vd.dsymbolSemantic(sc);
         Expression de = new DeclarationExp(e.loc, vd);
@@ -903,7 +903,7 @@ private Expression callCpCtor(Scope* sc, Expression e, Type destinationType, boo
      */
     VarDeclaration tmp = copyToTemp(STC.rvalue, "__copytmp", e);
     if (nrvo)
-        tmp.adFlags |= Declaration.nrvo;
+        tmp.nrvo = true;
     if (sd.hasCopyCtor && destinationType)
     {
         // https://issues.dlang.org/show_bug.cgi?id=22619

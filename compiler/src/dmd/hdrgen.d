@@ -1658,7 +1658,7 @@ void toCBuffer(Dsymbol s, ref OutBuffer buf, ref HdrGenState hgs)
     {
         if (d.storage_class & STC.local)
             return;
-        if (d.adFlags & d.hidden)
+        if (d.hidden)
             return;
         buf.writestring("alias ");
         if (d.aliassym)

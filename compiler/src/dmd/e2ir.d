@@ -642,7 +642,7 @@ elem* toElem(Expression e, ref IRState irs)
         if (se.var.toParent2())
             fd = se.var.toParent2().isFuncDeclaration();
 
-        const bool nrvo = fd && (fd.isNRVO() && fd.nrvo_var == se.var || se.var.adFlags & Declaration.nrvo && fd.shidden);
+        const bool nrvo = fd && (fd.isNRVO() && fd.nrvo_var == se.var || se.var.nrvo && fd.shidden);
         if (nrvo)
             s = fd.shidden;
 

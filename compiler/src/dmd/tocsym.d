@@ -163,7 +163,7 @@ Symbol* toSymbol(Dsymbol s)
                 s.Sflags |= SFLartifical;
             if (isNRVO)
                 s.Sflags |= SFLnodebug;
-            if (vd.adFlags & Declaration.nounderscore)
+            if (vd.noUnderscore)
                 s.Sflags |= SFLnounderscore;
 
             TYPE* t;
@@ -441,7 +441,7 @@ Symbol* toSymbol(Dsymbol s)
                         break;
 
                     case LINK.c:
-                        if (fd.adFlags & Declaration.nounderscore)
+                        if (fd.noUnderscore)
                             s.Sflags |= SFLnounderscore;
                         goto case;
                     case LINK.objc:

@@ -6654,21 +6654,24 @@ public:
     Type* type;
     Type* originalType;
     StorageClass storage_class;
-    Visibility visibility;
-    LINK _linkage;
-    int16_t inuse;
-    uint8_t adFlags;
-    enum : int32_t { wasRead = 1 };
-
-    enum : int32_t { ignoreRead = 2 };
-
-    enum : int32_t { nounderscore = 4 };
-
-    enum : int32_t { hidden = 8 };
-
-    enum : int32_t { nrvo = 16 };
-
     _d_dynamicArray< const char > mangleOverride;
+    Visibility visibility;
+    int16_t inuse;
+    LINK _linkage() const;
+    LINK _linkage(LINK v);
+    bool wasRead() const;
+    bool wasRead(bool v);
+    bool ignoreRead() const;
+    bool ignoreRead(bool v);
+    bool noUnderscore() const;
+    bool noUnderscore(bool v);
+    bool hidden() const;
+    bool hidden(bool v);
+    bool nrvo() const;
+    bool nrvo(bool v);
+private:
+    uint8_t bitFields;
+public:
     const char* kind() const override;
     uinteger_t size(Loc loc) final override;
     bool isStatic() const;
