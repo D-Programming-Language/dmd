@@ -1,0 +1,30 @@
+Add a shortened form for switch's case expression using `=>` instead of `:` to make `break` optional, it'll automatically break at the end of the scope.
+
+---
+enum K = 42;
+switch (K)
+{
+    case 42 => printf("yes!\n");
+
+    default => printf("no!\n");
+}
+---
+
+Is equivalent to:
+
+---
+enum K = 42;
+switch (42)
+{
+    case 42:
+    {
+        printf("yes!\n");
+        break;
+    }
+    default:
+    {
+        printf("no!\n");
+        break;
+    }
+}
+---
