@@ -64,7 +64,7 @@ nothrow:
     extern (C++) static Loc singleFilename(const char* filename)
     {
         Loc result;
-        locFileTable ~= BaseLoc(filename.toDString, locIndex, 0, [0]);
+        locFileTable ~= new BaseLoc(filename.toDString, locIndex, 0, [0]);
         result.index = locIndex++;
         return result;
     }
@@ -287,11 +287,11 @@ private size_t fileTableIndex(uint index) nothrow @nogc
  */
 BaseLoc* newBaseLoc(const(char)* filename, size_t size) nothrow
 {
-    locFileTable ~= BaseLoc(filename.toDString, locIndex, 1, [0]);
+    locFileTable ~= new BaseLoc(filename.toDString, locIndex, 1, [0]);
     // Careful: the endloc of a FuncDeclaration can
     // point to 1 past the very last byte in the file, so account for that
     locIndex += size + 1;
-    return &locFileTable[$ - 1];
+    return locFileTable[$ - 1];
 }
 
 /**
@@ -443,4 +443,4 @@ struct BaseLoc
 private __gshared uint locIndex = 1;
 
 // Global mapping of Loc indices to source file offset/line/column, see `BaseLoc`
-private __gshared BaseLoc[] locFileTable;
+private __gshared BaseLoc*[] locFileTable;
