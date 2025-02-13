@@ -4716,6 +4716,11 @@ public import core.lifetime : _d_newclassT;
 public import core.lifetime : _d_newclassTTrace;
 public import core.lifetime : _d_newitemT;
 
+public import core.interpolation : InterpolationHeader;
+public import core.interpolation : InterpolationFooter;
+public import core.interpolation : InterpolatedLiteral;
+public import core.interpolation : InterpolatedExpression;
+
 public @trusted @nogc nothrow pure extern (C) void _d_delThrowable(scope Throwable);
 
 // Compare class and interface objects for ordering.
