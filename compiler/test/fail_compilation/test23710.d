@@ -1,7 +1,7 @@
 /* REQUIRED_ARGS: -betterC
 TEST_OUTPUT:
 ---
-fail_compilation/test23710.d(111): Error: array concatenation of expression `foo ~ [1, 2, 3]` requires the GC which is not available with -betterC
+fail_compilation/test23710.d(111): Error: `foo ~ [1, 2, 3]` is not allowed in -betterC mode because it requires the garbage collector.
 ---
  */
 // https://issues.dlang.org/show_bug.cgi?id=23710
