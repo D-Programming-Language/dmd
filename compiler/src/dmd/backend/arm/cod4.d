@@ -247,7 +247,7 @@ void cdaddass(ref CGstate cg, ref CodeBuilder cdb,elem* e,ref regm_t pretregs)
     int isbyte = (sz == 1);                     // 1 for byte operation, else 0
 
     // See if evaluate in XMM registers
-    if (config.fpxmmregs && tyxmmreg(tyml) && op != OPnegass)
+    if (0 && config.fpxmmregs && tyxmmreg(tyml) && op != OPnegass)
     {
         xmmopass(cdb,e,pretregs);
         return;
@@ -255,16 +255,8 @@ void cdaddass(ref CGstate cg, ref CodeBuilder cdb,elem* e,ref regm_t pretregs)
 
     if (tyfloating(tyml))
     {
-        if (config.exe & EX_posix)
-        {
-            if (op == OPnegass)
-                cdnegass87(cdb,e,pretregs);
-            else
-                opass87(cdb,e,pretregs);
-        }
-        else
-            assert(0);
-        return;
+	floatOpAss(cdb,e,pretregs);
+	return;
     }
     regm_t forccs = pretregs & mPSW;            // return result in flags
     regm_t forregs = pretregs & ~mPSW;          // return result in regs
@@ -438,6 +430,103 @@ void cdaddass(ref CGstate cg, ref CodeBuilder cdb,elem* e,ref regm_t pretregs)
 }
 
 /********************************
+ * Generate code for op=
+ */
+@trusted
+void floatOpAss(ref CodeBuilder cdb,elem* e,ref regm_t pretregs)
+{
+    printf("floatOpass(e=%p, pretregs = %s)\n",e,regm_str(pretregs));
+    elem_print(e);
+    elem* e1 = e.E1;
+    elem* e2 = e.E2;
+    tym_t ty1 = tybasic(e1.Ety);
+    const sz1 = _tysize[ty1];
+    regm_t rretregs = INSTR.FLOATREGS & ~pretregs;
+    if (!rretregs)
+        rretregs = INSTR.FLOATREGS;
+
+rretregs = 1L << 34; // until loaddata() works
+    codelem(cgstate,cdb,e2,rretregs,false); // eval right leaf
+    reg_t rreg = findreg(rretregs);
+
+    code cs;
+    regm_t retregs;
+    reg_t reg;
+    bool regvar = false;
+    if (config.flags4 & CFG4optimized)
+    {
+        // Be careful of cases like (x = x+x+x). We cannot evaluate in
+        // x if x is in a register.
+        reg_t varreg;
+        regm_t varregm;
+        if (isregvar(e1,varregm,varreg) && // if lvalue is register variable
+            doinreg(e1.Vsym,e2)            // and we can compute directly into it
+           )
+        {   regvar = true;
+            retregs = varregm;
+            reg = varreg;               // evaluate directly in target register
+            getregs(cdb,retregs);       // destroy these regs
+        }
+    }
+
+    if (!regvar)
+    {
+        getlvalue(cdb,cs,e1,rretregs,RM.rw);         // get EA
+        retregs = pretregs & INSTR.FLOATREGS & ~rretregs;
+        if (!retregs)
+            retregs = INSTR.FLOATREGS & ~rretregs;
+        reg = allocreg(cdb,retregs,ty1);
+	loadFromEA(cs,reg,sz1,sz1);
+	cdb.gen(&cs);
+    }
+
+    reg_t Rd = reg, Rn = rreg, Rm = reg;
+    uint ftype = sz1 == 2 ? 3 :
+		 sz1 == 4 ? 0 : 1;
+    switch (e.Eoper)
+    {
+	// FADD/FSUB (extended register)
+	// http://www.scs.stanford.edu/~zyedidia/arm64/encodingindex.html#addsub_ext
+	case OPaddass:
+	    cdb.gen1(INSTR.fadd_float(ftype,Rm,Rn,Rd));     // FADD Rd,Rn,Rm
+	    break;
+
+	case OPminass:
+	    cdb.gen1(INSTR.fsub_float(ftype,Rm,Rn,Rd));     // FSUB Rd,Rn,Rm
+	    break;
+
+	case OPmulass:
+	    cdb.gen1(INSTR.fmul_float(ftype,Rm,Rn,Rd));     // FMUL Rd,Rn,Rm
+	    break;
+
+	case OPdivass:
+	    cdb.gen1(INSTR.fdiv_float(ftype,Rm,Rn,Rd));     // FDIV Rd,Rn,Rm
+	    break;
+
+	default:
+	    assert(0);
+    }
+
+    if (!regvar)
+    {
+        storeToEA(cs,reg,sz1);
+        cdb.gen(&cs);
+    }
+
+    if (e1.Ecount ||                     // if lvalue is a CSE or
+        regvar)                          // rvalue can't be a CSE
+    {
+        getregs_imm(cdb,retregs);        // necessary if both lvalue and
+                                         //  rvalue are CSEs (since a reg
+                                         //  can hold only one e at a time)
+        cssave(e1,retregs,!OTleaf(e1.Eoper)); // if lvalue is a CSE
+    }
+
+    fixresult(cdb,e,retregs,pretregs);
+    freenode(e1);
+}
+
+/********************************
  * Generate code for *=
  */
 
@@ -455,24 +544,16 @@ void cdmulass(ref CGstate cg, ref CodeBuilder cdb,elem* e,ref regm_t pretregs)
     uint sz = _tysize[tyml];
 
     // See if evaluate in XMM registers
-    if (config.fpxmmregs && tyxmmreg(tyml) && !(pretregs & mST0))
+    if (0 && config.fpxmmregs && tyxmmreg(tyml) && !(pretregs & mST0))
     {
         xmmopass(cdb,e,pretregs);
         return;
     }
 
-    static if (0)
     if (tyfloating(tyml))
     {
-        if (config.exe & EX_posix)
-        {
-            opass87(cdb,e,pretregs);
-        }
-        else
-        {
-            opassdbl(cdb,e,pretregs,op);
-        }
-        return;
+	floatOpAss(cdb,e,pretregs);
+	return;
     }
 
     assert(sz <= REGSIZE);
@@ -530,24 +611,16 @@ void cddivass(ref CGstate cg, ref CodeBuilder cdb,elem* e,ref regm_t pretregs)
     OPER op = e.Eoper;                     // OPxxxx
 
     // See if evaluate in XMM registers
-    if (config.fpxmmregs && tyxmmreg(tyml) && op != OPmodass && !(pretregs & mST0))
+    if (0 && config.fpxmmregs && tyxmmreg(tyml) && op != OPmodass && !(pretregs & mST0))
     {
         xmmopass(cdb,e,pretregs);
         return;
     }
 
-    static if (0)
     if (tyfloating(tyml))
     {
-        if (config.exe & EX_posix)
-        {
-            opass87(cdb,e,pretregs);
-        }
-        else
-        {
-            opassdbl(cdb,e,pretregs,op);
-        }
-        return;
+	floatOpAss(cdb,e,pretregs);
+	return;
     }
 
     code cs;
