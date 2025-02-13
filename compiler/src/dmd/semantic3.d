@@ -994,6 +994,28 @@ private extern(C++) final class Semantic3Visitor : Visitor
              * [out] postconditions.
              */
             immutable bool isNothrow = f.isNothrow && !funcdecl.nothrowInprocess;
+
+            void commonContractSem(ref Statement s, const(char*) type, CHECKENABLE use)
+            {
+                s = s.statementSemantic(sc2);
+
+                const blockExit = s.blockExit(funcdecl, null);
+                if (blockExit & BE.throw_)
+                {
+                    if (isNothrow)
+                        error(funcdecl.loc, "`%s`: `%s` contract may throw but function is marked as `nothrow`",
+                              type, funcdecl.toPrettyChars());
+                    else if (funcdecl.nothrowInprocess)
+                        f.isNothrow = false;
+                }
+
+                funcdecl.hasNoEH = false;
+
+                sc2 = sc2.pop();
+
+                if (use == CHECKENABLE.off)
+                    s = null;
+            }
             if (freq)
             {
                 /* frequire is composed of the [in] contracts
@@ -1007,24 +1029,7 @@ private extern(C++) final class Semantic3Visitor : Visitor
                 // BUG: need to error if accessing out parameters
                 // BUG: need to disallow returns
                 // BUG: verify that all in and ref parameters are read
-                freq = freq.statementSemantic(sc2);
-
-                const blockExit = freq.blockExit(funcdecl, null);
-                if (blockExit & BE.throw_)
-                {
-                    if (isNothrow)
-                        error(funcdecl.loc, "`%s`: `in` contract may throw but function is marked as `nothrow`",
-                            funcdecl.toPrettyChars());
-                    else if (funcdecl.nothrowInprocess)
-                        f.isNothrow = false;
-                }
-
-                funcdecl.hasNoEH = false;
-
-                sc2 = sc2.pop();
-
-                if (global.params.useIn == CHECKENABLE.off)
-                    freq = null;
+                commonContractSem(freq, "in", global.params.useIn);
             }
 
             if (fens)
@@ -1050,25 +1055,7 @@ private extern(C++) final class Semantic3Visitor : Visitor
 
                 if (funcdecl.fensure && f.next.ty != Tvoid)
                     funcdecl.buildResultVar(scout, f.next);
-
-                fens = fens.statementSemantic(sc2);
-
-                const blockExit = fens.blockExit(funcdecl, null);
-                if (blockExit & BE.throw_)
-                {
-                    if (isNothrow)
-                        error(funcdecl.loc, "`%s`: `out` contract may throw but function is marked as `nothrow`",
-                            funcdecl.toPrettyChars());
-                    else if (funcdecl.nothrowInprocess)
-                        f.isNothrow = false;
-                }
-
-                funcdecl.hasNoEH = false;
-
-                sc2 = sc2.pop();
-
-                if (global.params.useOut == CHECKENABLE.off)
-                    fens = null;
+                commonContractSem(fens, "out", global.params.useOut);
             }
             if (funcdecl.fbody && funcdecl.fbody.isErrorStatement())
             {
