@@ -336,7 +336,7 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
                      * As:
                      *      s;
                      *      try { s1; s2; }
-                     *      catch (Throwable __o)
+                     *      catch (Exception __o)
                      *      { sexception; throw __o; }
                      */
                     auto a = new Statements();
@@ -357,7 +357,7 @@ Statement statementSemanticVisit(Statement s, Scope* sc)
                     }
 
                     auto catches = new Catches();
-                    auto ctch = new Catch(Loc.initial, getThrowable(), id, handler);
+                    auto ctch = new Catch(Loc.initial, getException(), id, handler);
                     ctch.internalCatch = true;
                     catches.push(ctch);
 
